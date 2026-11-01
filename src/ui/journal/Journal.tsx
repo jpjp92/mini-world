@@ -3,7 +3,7 @@
 import { useStore } from 'zustand';
 import { gameStore } from '@/store/gameStore';
 import type { JournalActions, JournalTab, JournalView } from '@/store/journal';
-import { characterIdFromSrc, portraitDataUrl } from '@/world/portrait';
+import Portrait from '../Portrait';
 import styles from './Journal.module.css';
 
 const TABS: { id: JournalTab; label: string }[] = [
@@ -75,32 +75,12 @@ function Mission({ mission }: { mission: JournalView['mission'] }) {
   );
 }
 
-function Portrait({ src, name }: { src: string; name: string }) {
-  return (
-    // 작은 외부 초상화라 next/image 최적화 대신 onError 폴백이 필요해요
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      className={styles.portrait}
-      src={src}
-      alt={name}
-      onError={(e) => {
-        const img = e.currentTarget;
-        const id = characterIdFromSrc(img.src);
-        if (id && !img.dataset.fallback) {
-          img.dataset.fallback = '1';
-          img.src = portraitDataUrl(id);
-        }
-      }}
-    />
-  );
-}
-
 function Quests({ view, actions }: { view: JournalView; actions: JournalActions | null }) {
   return (
     <ul className={styles.list}>
       {view.quests.map((q) => (
         <li key={q.id} className={styles.questRow}>
-          <Portrait src={q.img} name={q.name} />
+          <Portrait className={styles.portrait} src={q.img} name={q.name} />
           <div className={styles.questInfo}>
             <b>{q.name}</b>
             <small>{q.questTitle}</small>

@@ -1427,9 +1427,7 @@ function closeModal(){const old=runtime.modal;runtime.modal=null;runtime.npc=nul
 function renderHud(){
   gameStore.getState().touch();
   $('islandLevel').textContent=`매력 ${appeal()} · 채집 ×${bonus().toFixed(2)}`;
-  $('playerName').textContent=activeChar().name;
-  $('playerPortrait').src=activeChar().img;
-  $('rosterCountLabel').innerHTML=`나의 캐릭터${unlockedRoster().length>1?' · '+unlockedRoster().length+'명':''} &nbsp; ▾`;
+  publishDock();
   const w=currentWeather();
   $('weatherText').textContent=`${w.name} · ${w.desc}`;
   $('islandName').textContent=islands[state.island].name;
@@ -1477,7 +1475,11 @@ function journalView(){
     passport:{count:state.stamps.length,total,stamps:Object.entries(games).map(([id,g])=>({id,icon:g.icon,name:g.name,earned:state.stamps.includes(id)})),caption:`바나나 ${plazaProgress().count}/4 · 코브 ${coveStampCount()}/4 · 스노우 ${islandGameIds('snow').filter(id=>state.stamps.includes(id)).length}/3`,overviewLabel:state.island==='banana'?'🏆 광장 수첩 · 트로피와 기록':`🏆 ${islands[state.island].name} · 기록 수첩`},
   };
 }
-let lastJournalJson='';
+let lastJournalJson='',lastDockJson='';
+function publishDock(){
+  const c=activeChar(),view={player:{id:c.id,name:c.name,img:c.img},rosterCount:unlockedRoster().length,decorating:Boolean(runtime.decor||runtime.removeDecor)},json=JSON.stringify(view);
+  if(json===lastDockJson)return;lastDockJson=json;gameStore.getState().setDock(view);
+}
 function renderSidebar(){
   const view=journalView(),json=JSON.stringify(view);
   if(json===lastJournalJson)return;lastJournalJson=json;gameStore.getState().setJournal(view);
@@ -1565,9 +1567,9 @@ function setDecor(id){
   runtime.decor=id==='remove'?null:id;runtime.removeDecor=id==='remove';clearInput();
   $('decorBanner').classList.remove('hidden');
   $('decorBanner').textContent=id==='remove'?'♻ 회수할 가구를 클릭하세요 · Esc 종료':`${catalog.find(c=>c.id===id).icon} 빈 곳 클릭으로 배치 · 놓인 가구 클릭으로 회수`;
-  $('decorateBtn').textContent='✓ 꾸미기 종료';setTab('decor');
+  publishDock();setTab('decor');
 }
-function endDecor(){runtime.decor=null;runtime.removeDecor=false;$('decorBanner').classList.add('hidden');$('decorateBtn').textContent='🪴 꾸미기';renderSidebar();}
+function endDecor(){runtime.decor=null;runtime.removeDecor=false;$('decorBanner').classList.add('hidden');publishDock();renderSidebar();}
 function validDecor(x,y){
   if(x<185||x>W-185||y<185||y>H-150)return false;
   if((state.island==='banana'&&(Math.hypot(x-960,y-670)<110||plazaSites().some(s=>Math.hypot(x-s.x,y-s.y)<60)))||(state.island!=='banana'&&Math.hypot(x-960,y-650)<125)||Math.hypot(x-islands[state.island].port.x,y-islands[state.island].port.y)<80)return false;
@@ -2506,9 +2508,8 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();runtime.hover=screenToWorld(e.clientX-r.left,e.clientY-r.top);});
 canvas.addEventListener('pointerleave',()=>runtime.hover=null);
 $('modalClose').onclick=closeModal;$('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal();});
-$('characterBtn').onclick=characterModal;$('travelBtn').onclick=travelModal;
-$('weatherBtn').onclick=cycleWeather;$('ferryBtn').onclick=openFerry;
-$('decorateBtn').onclick=()=>{if(runtime.decor||runtime.removeDecor)endDecor();else{setTab('decor');setDecor('flower');}};
+$('weatherBtn').onclick=cycleWeather;
+
 $('zoomOut').onclick=()=>{state.zoom=clamp(state.zoom-.1,.7,1.4);save();};$('zoomIn').onclick=()=>{state.zoom=clamp(state.zoom+.1,.7,1.4);save();};
 
 let lastFrame=performance.now(),lastPositionSave=0,lastSidebar=0;
@@ -2536,8 +2537,15 @@ const journalActions={
   openUpgrade(id){openUpgrade(id);},
   openOverview(){state.island==='banana'?openPlaza():islandPassport(state.island);},
 };
+const dockActions={
+  openCharacter:characterModal,
+  openFerry,
+  openTravel:travelModal,
+  toggleDecorate(){if(runtime.decor||runtime.removeDecor)endDecor();else{setTab('decor');setDecor('flower');}},
+};
 return {
   journal:journalActions,
+  dock:dockActions,
   toggleSound(){state.sound=!state.sound;dirty();sound('talk');},
   openHelp:help,
   openSettings:settings,

@@ -50,7 +50,7 @@ test('캐릭터 이미지가 없으면 SVG 초상화로 대체해요', async ({ 
   await page.route(/\.webp(\?.*)?$/, (route) => route.abort());
   await page.goto('/');
   await expect(page.locator('#playerName')).toHaveText('아띠');
-  const portrait = page.locator('#playerPortrait');
+  const portrait = page.locator('#characterBtn img');
   await expect(portrait).toHaveAttribute('src', /^data:image\/svg\+xml/);
   const broken = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLImageElement>('.legacy-root img')].filter((i) => i.complete && i.naturalWidth === 0).length,
@@ -58,21 +58,24 @@ test('캐릭터 이미지가 없으면 SVG 초상화로 대체해요', async ({ 
   expect(broken).toBe(0);
 });
 
-test('저장 → 다시 접속하면 같은 상태로 이어져요', async ({ page, context }) => {
+test('저장 → 다시 접속하면 같은 상태로 이어져요', async ({ page, browser, baseURL }) => {
   await page.goto('/');
   await expect(page.locator('#coins')).toHaveText('120');
   await page.waitForFunction(() => localStorage.getItem('mini-world-save') !== null);
   const raw = JSON.parse((await page.evaluate(() => localStorage.getItem('mini-world-save')))!);
-  await page.close();
 
-  // 게임은 페이지를 떠날 때도 저장하므로, 다음 접속 직전에 저장을 바꿔 넣어요
+  // 다음 접속은 수정한 저장만 가진 새 브라우저 컨텍스트로 해요 (첫 페이지의 종료 시 저장과 섞이지 않게)
   raw.coins = 4321;
   raw.stamps = ['soccer'];
-  await context.addInitScript((data) => localStorage.setItem('mini-world-save', data), JSON.stringify(raw));
-  const next = await context.newPage();
-  await next.goto('/');
-  await expect(next.locator('#coins')).toHaveText('4,321');
-  const saved = await next.evaluate(() => JSON.parse(localStorage.getItem('mini-world-save')!));
+  const next = await browser.newContext({
+    baseURL,
+    storageState: { cookies: [], origins: [{ origin: baseURL!, localStorage: [{ name: 'mini-world-save', value: JSON.stringify(raw) }] }] },
+  });
+  const p2 = await next.newPage();
+  await p2.goto('/');
+  await expect(p2.locator('#coins')).toHaveText('4,321');
+  const saved = await p2.evaluate(() => JSON.parse(localStorage.getItem('mini-world-save')!));
   expect(saved.stamps).toEqual(['soccer']);
   expect(saved.version).toBe(4);
+  await next.close();
 });

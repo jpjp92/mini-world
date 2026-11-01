@@ -18,7 +18,7 @@
 ## Architecture
 
 ```
-React Header·Journal ──subscribe(selector)──▶ gameStore (Zustand) ◀──touch/replace── legacy game (v23)
+React Header·Journal·Dock ──subscribe(selector)──▶ gameStore (Zustand) ◀──touch/replace── legacy game (v23)
                                    │                                      │
                               saveData                              Canvas 2D loop
                      (default · sanitize · serialize)            (world + arcade)
@@ -42,10 +42,10 @@ src/
 ├─ store/          # gameStore, saveData
 ├─ engine/         # 루프, 입력, 그리기 헬퍼
 ├─ world/          # 캐릭터 렌더링, SVG 초상화 폴백
-└─ ui/             # GameHeader, journal/(모험 노트), theme.css, 레거시 부팅, 실험용 캔버스
+└─ ui/             # GameHeader, journal/(모험 노트), Dock, Portrait, theme.css, 레거시 부팅, 실험용 캔버스
 tests/
 ├─ unit/           # config, saveData, 저장 마이그레이션, 금지 명칭 검사
-└─ e2e/            # 부팅·이동·저장 유지·이미지 폴백·헤더·모험 노트
+└─ e2e/            # 부팅·이동·저장 유지·이미지 폴백·헤더·모험 노트·하단 영역
 docs/
 ├─ plans/          # plan_YYYY-MM-DD.md
 ├─ logs/           # log_YYYY-MM-DD.md
@@ -97,7 +97,7 @@ pnpm dev                          # http://localhost:3000
 ## Roadmap
 
 - [x] **Phase 0** — Next.js 셸, 테스트 환경
-- [ ] **Phase 1** — v23 이전: 레거시 모듈 실행 ✅ · config 분리 ✅ · store 분리 ✅ · 헤더 React화 ✅ · 모험 노트 React화 ✅ · 디자인 리프레시 ✅ · 하단 UI/모달 React화 · 엔진 분리
+- [ ] **Phase 1** — v23 이전: 레거시 모듈 실행 ✅ · config 분리 ✅ · store 분리 ✅ · 헤더 React화 ✅ · 모험 노트 React화 ✅ · 디자인 리프레시 ✅ · 하단 UI React화 ✅ · 모달 React화 · 엔진 분리
 - [ ] **Phase 2** — 종목 11개를 `GameModule` 인터페이스로 분리, 레거시 제거
 - [ ] **Phase 3** — 닉네임 로그인(익명 세션), 클라우드 저장
 - [ ] **Phase 4** — 판 기록 검증 API, 주간 리더보드

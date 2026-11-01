@@ -74,3 +74,18 @@ export interface JournalActions {
   openUpgrade(id: string): void;
   openOverview(): void;
 }
+
+/** 월드 아래 영역(내 캐릭터·빠른 이동 버튼) 화면 데이터 */
+export interface DockView {
+  player: { id: string; name: string; img: string };
+  /** 해금한 캐릭터 수 */
+  rosterCount: number;
+  decorating: boolean;
+}
+
+export interface DockActions {
+  openCharacter(): void;
+  openFerry(): void;
+  openTravel(): void;
+  toggleDecorate(): void;
+}

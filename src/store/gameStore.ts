@@ -2,7 +2,7 @@
 // 레거시 코드가 state 객체를 직접 바꾸기 때문에, 스토어는 같은 객체를 들고 있고
 // 변경이 있을 때 rev 를 올려 구독자(React UI)에 알려요. 레거시 분리가 끝나면 불변 업데이트로 바꿔요.
 import { createStore } from 'zustand/vanilla';
-import type { JournalView } from './journal';
+import type { DockView, JournalView } from './journal';
 import { createDefaultState, type GameState } from './saveData';
 
 export interface GameStore {
@@ -18,6 +18,9 @@ export interface GameStore {
   /** 모험 노트 화면 데이터 (레거시가 계산) */
   journal: JournalView | null;
   setJournal(journal: JournalView): void;
+  /** 월드 아래 영역 화면 데이터 (레거시가 계산) */
+  dock: DockView | null;
+  setDock(dock: DockView): void;
 }
 
 export const gameStore = createStore<GameStore>()((set) => ({
@@ -29,4 +32,6 @@ export const gameStore = createStore<GameStore>()((set) => ({
   setSaveStatus: (saveStatus) => set({ saveStatus }),
   journal: null,
   setJournal: (journal) => set({ journal }),
+  dock: null,
+  setDock: (dock) => set({ dock }),
 }));
