@@ -74,7 +74,7 @@ mini-world/
 
 - 공개 저장소예요. 커밋 금지: `ref/`(v23 원본), `public/characters/`, `supabase/`, `.env*`.
 - 원작·실제 구단 이름(미니언, 바르샤 등)은 `src/`에 넣지 않아요. `tests/unit/no-legacy-names.test.ts`가 검사해요.
-- push는 직접 해요.
+- 커밋 메시지는 한국어로 써요 (`feat:`, `docs:` 같은 접두사는 OK). push는 직접 해요.
 
 ## 7. 문서 규칙
 
