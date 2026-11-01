@@ -17,7 +17,7 @@
 ## Architecture
 
 ```
-React UI ──subscribe(rev)──▶ gameStore (Zustand) ◀──touch/replace── legacy game (v23)
+React Header ──subscribe(selector)──▶ gameStore (Zustand) ◀──touch/replace── legacy game (v23)
                                    │                                      │
                               saveData                              Canvas 2D loop
                      (default · sanitize · serialize)            (world + arcade)
@@ -26,8 +26,9 @@ React UI ──subscribe(rev)──▶ gameStore (Zustand) ◀──touch/replac
 ```
 
 - **Strangler 방식 이전**: v23 스크립트를 `src/legacy/v23/`에서 그대로 실행하고, 기능 단위로 `config` → `store` → `ui` → `games`로 분리합니다.
-- **엔진/React 분리**: 프레임 루프는 React 밖에서 돌고, React는 HUD·모달·사이드바만 렌더합니다. `src/engine`, `src/games`는 Next.js에 의존하지 않습니다.
+- **엔진/React 분리**: 프레임 루프는 React 밖에서 돌고, UI를 헤더부터 React로 옮기는 중입니다. `src/engine`, `src/games`는 Next.js에 의존하지 않습니다.
 - **상태 2계층**: 저장 대상(`state`: 코인·레벨·기록)은 store, 비저장 대상(`runtime`: 입력·카메라·진행 중 판)은 엔진 내부.
+- **헤더 React화**: 재화·효과음·저장 상태를 selector로 구독합니다. 헤더 버튼은 레거시가 반환하는 액션으로 기존 설정 모달을 엽니다. 효과음·도움말 버튼은 v23 디자인대로 숨기고 설정 화면에서 제공합니다. 사이드바·모달은 레거시 DOM 렌더링을 유지합니다.
 - **저장 포맷 v4**: v2/v3 필드 호환. 로드 시 `sanitizeSave`에서 범위·타입을 정리하고, 구버전 저장 키와 캐릭터 id를 자동 마이그레이션합니다.
 
 ## Project Structure
@@ -40,10 +41,10 @@ src/
 ├─ store/          # gameStore, saveData
 ├─ engine/         # 루프, 입력, 그리기 헬퍼
 ├─ world/          # 캐릭터 렌더링, SVG 초상화 폴백
-└─ ui/             # React 컴포넌트
+└─ ui/             # React 헤더(GameHeader), 레거시 부팅, 실험용 캔버스
 tests/
 ├─ unit/           # config, saveData, 저장 마이그레이션, 금지 명칭 검사
-└─ e2e/            # 부팅·이동·저장 유지·이미지 폴백
+└─ e2e/            # 부팅·이동·저장 유지·이미지 폴백·헤더 연동
 docs/
 ├─ plans/          # plan_YYYY-MM-DD.md
 ├─ logs/           # log_YYYY-MM-DD.md
@@ -95,7 +96,7 @@ pnpm dev                          # http://localhost:3000
 ## Roadmap
 
 - [x] **Phase 0** — Next.js 셸, 테스트 환경
-- [ ] **Phase 1** — v23 이전: 레거시 모듈 실행 ✅ · config 분리 ✅ · store 분리 ✅ · UI React화
+- [ ] **Phase 1** — v23 이전: 레거시 모듈 실행 ✅ · config 분리 ✅ · store 분리 ✅ · 헤더 React화 ✅ · 사이드바/모달 React화 · 엔진 분리
 - [ ] **Phase 2** — 종목 11개를 `GameModule` 인터페이스로 분리, 레거시 제거
 - [ ] **Phase 3** — 닉네임 로그인(익명 세션), 클라우드 저장
 - [ ] **Phase 4** — 판 기록 검증 API, 주간 리더보드

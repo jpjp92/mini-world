@@ -1397,11 +1397,11 @@ function save(){
   try{
     state.savedAt=Date.now();
     localStorage.setItem(SAVE_KEY,serializeSave());
-    storageWorks=true;gameStore.getState().setSaveStatus('saved');$('saveStatus').textContent='✓ 자동 저장됨';
-  }catch(e){storageWorks=false;gameStore.getState().setSaveStatus('blocked');$('saveStatus').textContent='저장 불가 · 설정에서 내보내기';}
+    storageWorks=true;gameStore.getState().setSaveStatus('saved');
+  }catch(e){storageWorks=false;gameStore.getState().setSaveStatus('blocked');}
   return storageWorks;
 }
-function dirty(){gameStore.getState().touch();clearTimeout(runtime.saveTimer);runtime.saveTimer=setTimeout(save,400);renderHud();renderSidebar();}
+function dirty(){clearTimeout(runtime.saveTimer);runtime.saveTimer=setTimeout(save,400);renderHud();renderSidebar();}
 function toast(message,bad=false,options={}){
   const key=options.key||message.replace(/\d+(?:\.\d+)?초/g,'#초');
   const kind=options.kind||(bad?'warning':/완료|완성|새로운 장소 발견|새 트로피|동료 합류/.test(message)?'milestone':'info');
@@ -1426,15 +1426,13 @@ function clearInput(){runtime.keys={};runtime.touch={};runtime.target=null;runti
 function showModal(title,html,kind='generic'){runtime.lastFocus=document.activeElement;runtime.modal=kind;clearInput();$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.remove('hidden');$('modalClose').focus();}
 function closeModal(){const old=runtime.modal;runtime.modal=null;runtime.npc=null;$('modal').classList.add('hidden');clearInput();if(old==='quit'&&runtime.arc?.phase==='paused')resumeArcade();runtime.lastFocus?.focus?.();}
 function renderHud(){
-  for(const k of ['coins','cp','trophies'])$(k).textContent=state[k].toLocaleString('ko-KR');
+  gameStore.getState().touch();
   $('islandLevel').textContent=`매력 ${appeal()} · 채집 ×${bonus().toFixed(2)}`;
   $('playerName').textContent=activeChar().name;
   $('playerPortrait').src=activeChar().img;
   $('rosterCountLabel').innerHTML=`나의 캐릭터${unlockedRoster().length>1?' · '+unlockedRoster().length+'명':''} &nbsp; ▾`;
   const w=currentWeather();
   $('weatherText').textContent=`${w.name} · ${w.desc}`;
-  $('audioBtn').textContent=state.sound?'♪':'♩';
-  $('audioBtn').setAttribute('aria-pressed',String(state.sound));
   $('discoveryCount').textContent=`발견한 장소 ${state.discovered.length} / ${regions.length}`;
   $('islandName').textContent=islands[state.island].name;
   $('stampCount').textContent=`${state.stamps.length} / ${Object.keys(games).length}`;
@@ -2533,9 +2531,8 @@ canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect()
 canvas.addEventListener('pointerleave',()=>runtime.hover=null);
 $('modalClose').onclick=closeModal;$('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal();});
 $('plazaOverviewBtn').onclick=()=>state.island==='banana'?openPlaza():islandPassport(state.island);
-$('characterBtn').onclick=characterModal;$('travelBtn').onclick=travelModal;$('helpBtn').onclick=help;$('settingsBtn').onclick=settings;
+$('characterBtn').onclick=characterModal;$('travelBtn').onclick=travelModal;
 $('weatherBtn').onclick=cycleWeather;$('ferryBtn').onclick=openFerry;
-$('audioBtn').onclick=()=>{state.sound=!state.sound;dirty();sound('talk');};
 $('decorateBtn').onclick=()=>{if(runtime.decor||runtime.removeDecor)endDecor();else{setTab('decor');setDecor('flower');}};
 $('zoomOut').onclick=()=>{state.zoom=clamp(state.zoom-.1,.7,1.4);save();};$('zoomIn').onclick=()=>{state.zoom=clamp(state.zoom+.1,.7,1.4);save();};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
@@ -2557,5 +2554,9 @@ if(loadWarning)toast(loadWarning,true);
 else setTimeout(()=>toast(!hadSave?'🌿 미니 월드 v23에 오신 걸 환영해요! 가구 체험과 구장 도전을 즐겨보세요!':'🌿 다시 만났네요! 새로운 섬 모험을 이어서 시작해요.'),700);
 requestAnimationFrame(frame);
 
-
+return {
+  toggleSound(){state.sound=!state.sound;dirty();sound('talk');},
+  openHelp:help,
+  openSettings:settings,
+};
 }

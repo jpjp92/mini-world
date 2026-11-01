@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { importLegacySave, SAVE_KEY } from '@/config/legacy';
 import { MARKUP } from '@/legacy/v23/markup';
 import { characterIdFromSrc, portraitDataUrl } from '@/world/portrait';
+import GameHeader, { type GameHeaderActions } from './GameHeader';
 import '@/legacy/v23/v23.css';
 import './result-card.css';
 
@@ -15,6 +16,7 @@ const imageBase = process.env.NEXT_PUBLIC_CHARACTER_BASE_URL?.replace(/\/$/, '')
 
 export default function LegacyGame() {
   const ref = useRef<HTMLDivElement>(null);
+  const [headerActions, setHeaderActions] = useState<GameHeaderActions | null>(null);
 
   useEffect(() => {
     const root = ref.current;
@@ -35,13 +37,19 @@ export default function LegacyGame() {
     );
     importLegacySave(window.localStorage);
     import('@/legacy/v23/game.js').then(({ bootV23 }) => {
-      bootV23({
+      const actions = bootV23({
         saveKey: SAVE_KEY,
         // 이미지 주소가 없으면 '#<id>.webp' 로 두어 error → SVG 초상화로 대체돼요.
         imageUrl: (id: string) => (imageBase ? `${imageBase}/${id}.webp` : `/missing/${id}.webp`),
       });
+      setHeaderActions(actions);
     });
   }, []);
 
-  return <div ref={ref} className="legacy-root" dangerouslySetInnerHTML={{ __html: MARKUP }} />;
+  return (
+    <div className="legacy-root">
+      <GameHeader actions={headerActions} />
+      <div ref={ref} dangerouslySetInnerHTML={{ __html: MARKUP }} />
+    </div>
+  );
 }
