@@ -25,6 +25,7 @@ pnpm dev                     # http://localhost:3000
 | `pnpm test` | Vitest 단위 테스트 (`tests/unit`) |
 | `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행) |
 | `pnpm test:legacy` | v23 원본 기준 테스트 (로컬 전용, `ref/2d_v23.html` 필요) |
+| `python3 scripts/extract_v23.py .` | v23 원본 → `src/legacy/v23/` 다시 생성 (로컬 전용) |
 | `pnpm add <pkg>` / `pnpm add -D <pkg>` | 패키지 추가 |
 | `pnpm exec playwright install chromium` | Playwright 브라우저 설치 (처음 한 번) |
 
@@ -33,8 +34,9 @@ pnpm dev                     # http://localhost:3000
 ```
 mini-world/
   src/
-    app/          # Next.js App Router (layout, page). 게임 페이지는 클라이언트 전용
-    ui/           # React UI. GameRoot(SSR 끔) → GameCanvas(엔진 시작/정리)
+    app/          # Next.js App Router. `/` = 게임(v23 레거시), `/lab` = 새 엔진 실험
+    ui/           # LegacyRoot → LegacyGame(v23 부팅), GameRoot → GameCanvas(새 엔진)
+    legacy/v23/   # v23 원본에서 생성한 game.js·markup.ts·v23.css (이름만 변경)
     engine/       # rAF 루프, 입력, 그리기 헬퍼. React·Next 의존 금지
     world/        # 월드 요소 (캐릭터, 이후 섬·NPC·장식)
     games/        # (Phase 2) 종목 모듈 11개
@@ -43,6 +45,12 @@ mini-world/
   tests/unit/  tests/e2e/
   docs/           # 기획(plan_날짜), 작업 일지(log_날짜), 이 가이드
 ```
+
+### 레거시 모듈 방식 (Phase 1)
+- v23 스크립트를 이름만 바꿔 `src/legacy/v23/game.js`로 넣고, `/`에서 그대로 실행해요. 화면·밸런스가 v23과 같아요.
+- 기능을 하나씩 `src/engine`, `src/world`, `src/games`, `src/store`로 떼어내고, 레거시 쪽 코드는 지워요. 레거시 파일이 비면 Phase 2 완료.
+- 저장 키: `mini-world-save`. 첫 실행 때 옛 v23 저장을 복사하고 캐릭터 id를 바꿔요 (`src/config/legacy.ts`).
+- `src/legacy/`는 ESLint 대상에서 빼요.
 
 ### 설계 원칙
 - **엔진과 React 분리**: 매 프레임 루프는 React 밖에서 돌고, React는 메뉴·모달·HUD만 그려요.

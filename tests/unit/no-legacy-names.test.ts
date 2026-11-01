@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 
 const BANNED = /minion|미니언|바르샤|첼시|아틀레티|캄프 누|메트로폴리타노/i;
 // 옛 id → 새 id 매핑은 저장 호환에 필요해서 예외
-const ALLOW = new Set(['src/config/roster.ts']);
+const ALLOW = new Set(['src/config/roster.ts', 'src/config/legacy.ts']);
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {

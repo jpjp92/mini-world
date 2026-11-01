@@ -1,17 +1,6 @@
+/* 페이지 공통 최소 스타일. 게임 화면 스타일은 src/legacy/v23/v23.css */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-  background: #f4f2e8;
-  color: #4d5b3f;
-  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  -webkit-font-smoothing: antialiased;
 }

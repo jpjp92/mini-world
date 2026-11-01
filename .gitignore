@@ -43,3 +43,6 @@ CLAUDE.md
 .claude/
 .agents/
 skills/
+
+# v23 추출 스크립트 (ref/ 원본 필요, 로컬 전용)
+scripts/extract_v23.py
