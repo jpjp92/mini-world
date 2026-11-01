@@ -1,0 +1,275 @@
+# 미니 월드 웹 전환 기획 v2.0
+
+2026-11-01 · plan1.0(2026-10-31)을 v23 실제 코드와 대조해서 다시 정리한 버전이에요.
+
+---
+
+## 0. v1.0 대비 바뀐 점 요약
+
+| 항목 | v1.0 | v2.0 | 이유 |
+|------|------|------|------|
+| 저장 포맷 | "version 4 호환" | **실제 v23은 `version:2` 저장, `2·3`만 로드** (`SAVE_KEY='minion-world-explorer-v2'`, 백업 키 `-backup`) | 코드 확인 결과. 마이그레이션 기준을 v2/v3로 잡아야 해요 |
+| 프레임워크 | Next.js App Router | **Next.js App Router 유지** (게임 페이지만 클라이언트 전용) | 장기적으로 리더보드·프로필·공유 페이지(SSR/OG 이미지), Supabase 쿠키 인증, Route Handler를 한 앱에서 다루기 좋아요 |
+| 캐릭터 IP | 리스크 항목 중 하나 | **공개 저장소 확정 → 오리지널 교체 필수** (§10) | 저장소가 public이라 원본 에셋·이름을 올릴 수 없어요 |
+| 이전 방식 | 모듈화 후 한 번에 교체 | **스트랭글러 방식**: legacy를 띄워둔 채 모듈 단위로 떼어냄 | 3,000줄 회귀 위험을 줄여요 |
+| 종목 인터페이스 | init/update/draw/onAction | + `getResult()`, `config` 분리, 결정적 RNG 주입 | 봇 테스트·점수 검증을 같은 코드로 재현하려면 필요해요 |
+
+---
+
+## 1. 현재 상태 (v23 분석)
+
+- **파일**: `ref/2d_v23.html` 약 990KB. base64 폰트(글리프 단위 서브셋) + WebP 캐릭터 이미지 12장 + JS 약 3,000줄.
+- **월드**: 섬 3개
+  - 🌿 바나나 아일랜드 — 축구(`soccer`), 테니스(`racket`), 바나나런(`racing`), 스타라이트 점프(`space`)
+  - ⛵ 챔피언 코브 — 사이클(`cycling`), 야구(`baseball`), 프리킥(`freekick`), 양궁(`archery`)
+  - 🏔️ 스노우 피크 — 스키(`ski`), 피겨(`figure`), 태권도(`taekwondo`)
+  - 총 **11종목**. 각 종목은 `targets[3]`(Lv1~3 목표점수) + `champTarget`, 25초, 입장 10 CP.
+- **경제/진행**: 코인, CP, 트로피, 종목 레벨(1~3), 스탬프, 챔피언 모드(레벨3 또는 섬 스탬프 전부), NPC 친밀도, 퀘스트(`questType/questTarget`), 퀴즈, 날씨 4종(보상 배수), 장식 8종(코스트/매력도/쿨다운).
+- **캐릭터**: 로스터 12명(종목 코치 NPC 겸 플레이어블), 기본 플레이어블 `atletico`. `perkDesc`는 있지만 일부만 코드에 반영됨(예: swimmer 보호막) → 결정 필요.
+- **구조 문제**: 전역 `state` / `runtime`, 종목별 `id==='...'` 분기가 `startArcade` 등에 흩어져 있음, 2·3차 섬은 `Object.assign(games, …)`로 덧붙인 구조.
+
+---
+
+## 2. 목표와 범위
+
+**1차 (MVP) — "똑같이, 하지만 나눠서"**
+- v23 플레이·화면·밸런스를 그대로 유지 (규칙 변경 금지)
+- 기존 localStorage 저장(v2/v3)을 그대로 읽고, 새 포맷(v4)으로 마이그레이션
+- Vercel 배포 + PR 미리보기
+
+**2차 — "내 기록 남기기"**
+- 닉네임 입력 로그인 (Supabase 익명 세션 + 닉네임, §5-1)
+- 클라우드 저장, 종목별 리더보드(주간/전체)
+
+**하지 않는 것**: 실시간 멀티, 결제, 네이티브 앱, 게임 규칙 재설계, 새 종목 추가(1·2차 동안).
+
+---
+
+## 3. 기술 스택
+
+| 영역 | 선택 | 비고 |
+|------|------|------|
+| 프레임워크 | Next.js (App Router) + React 19 + TypeScript | `/`(게임, `dynamic(..., { ssr: false })`), `/leaderboard`, `/u/[nickname]`(2차, 서버 렌더) |
+| 서버 | Route Handler (`app/api/*/route.ts`) | 점수 제출 검증, 리더보드 조회. 인증은 `@supabase/ssr` 쿠키 세션 |
+| 렌더링 | 기존 Canvas 2D 유지 | 엔진 교체 없음 |
+| 상태 | Zustand (`vanilla` store) | 엔진은 `store.getState()`로 직접 읽고 쓰고, React는 selector로 구독 |
+| 스타일 | 기존 CSS → CSS Modules | Tailwind 미사용 |
+| DB/인증 | Supabase (Postgres, Auth 익명, RLS) | 2차 |
+| 테스트 | Vitest(로직·저장·봇) + Playwright(E2E·프레임) | |
+| 패키지 | pnpm | |
+
+> 원칙: `src/engine`·`src/games`는 Next.js를 import하지 않아요(프레임워크 독립). Next.js는 껍데기(라우팅, 서버, 메타)만 맡고, 게임 페이지는 `'use client'` + SSR 끔으로 v23처럼 동작해요.
+
+---
+
+## 4. 아키텍처
+
+```
+React UI (Header, Sidebar, Modal, HUD, Settings)
+      │  subscribe(selector)          ▲ actions
+      ▼                               │
+Zustand store ── state(저장) ─────────┘
+      ▲  getState / setState
+      │
+Engine (rAF 루프, React 밖)
+  ├─ input / camera / sound / draw 공통
+  ├─ world: islands, regions, stations, npcs, decors, weather
+  └─ arcade: GameModule 레지스트리 (11개, 동적 import)
+```
+
+- **두 층 상태**: `state`(저장됨: 코인·레벨·기록·장식…)는 store, `runtime`(입력·카메라·진행 중 판)은 엔진 내부.
+- **종목 인터페이스**
+  ```ts
+  interface GameModule {
+    id: GameId; config: GameConfig;          // targets, champTarget, unit, controls…
+    init(ctx: RunContext): RunState;          // RunContext에 rng(seed), level, champ, char 포함
+    update(s: RunState, dt: number, input: InputFrame): void;
+    draw(g: CanvasRenderingContext2D, s: RunState): void;
+    getResult(s: RunState): RunResult;        // score, stats, passed
+  }
+  ```
+  - `rng`를 주입해서 같은 seed + 입력 로그면 같은 점수 → 봇 테스트와 서버 검증에 재사용.
+  - 캐릭터 perk는 `perks.ts`에서 `RunContext`를 수정하는 훅으로 모아요(분기 제거).
+- **config 분리**: `config/games.ts`, `islands.ts`, `roster.ts`, `decors.ts`, `weather.ts`, `balance.ts`. v23의 리터럴을 그대로 옮기고 숫자는 건드리지 않아요.
+
+### 폴더 구조
+```
+mini-world/
+  app/
+    layout.tsx  page.tsx        # 게임 진입 (클라이언트 전용)
+    leaderboard/page.tsx        # 2차, 서버 렌더
+    api/runs/route.ts           # 2차, 점수 제출 검증
+  # v23 원본은 저장소에 넣지 않아요 (ref/는 .gitignore)
+  public/characters/*.webp
+  src/
+    engine/   world/   games/<id>/   ui/
+    store/    # state, save/load, migrate(v2→v4)
+    config/   lib/supabase/
+  tests/unit/  tests/bot/  tests/e2e/
+```
+
+---
+
+## 5. 저장과 데이터
+
+### 로컬 저장 (1차)
+- 키: 새 키 `mini-world-save-v4`. 첫 실행 시 `minion-world-explorer-v2`(+`-backup`)를 읽어 `migrate()` → v4 저장. **원본 키는 지우지 않아요**(롤백 대비).
+- v4 = v2/v3 필드 + `version:4`, `updatedAt`, `deviceId`. 쿨다운(`cooldowns`, `decorCooldowns`)은 v23과 같은 절대시간 방식 유지.
+- 기존 v23의 검증 로직(`load()`의 숫자 범위/배열 정리)은 `zod` 스키마로 옮겨요.
+- 설정의 "기록 내보내기/가져오기"(JSON) 유지.
+
+### 클라우드 저장 (2차)
+1. 항상 localStorage 먼저 저장(오프라인 동작).
+2. 로그인 상태면 5초 debounce로 `saves` upsert.
+3. 접속 시 `updatedAt` 비교 → 최신 사용. 양쪽 모두 마지막 동기화 이후 바뀌었으면 두 저장 요약(코인·트로피·레벨 합)을 보여주고 선택.
+4. 다른 기기 이어하기는 이번 범위에서 빼요(§5-1 참고).
+
+### 5-1. 로그인 (닉네임 입력)
+
+비밀번호·이메일 없이 **닉네임만 입력해서 시작**해요.
+
+**흐름**
+1. 첫 화면에서 닉네임 입력 (2~12자, 한글/영문/숫자, 금칙어 필터).
+2. `supabase.auth.signInAnonymously()`로 익명 세션 생성 → `profiles`에 `{ id: auth.uid(), nickname }` insert.
+3. 닉네임 중복이면 "이미 사용 중이에요" 안내 (`nickname` unique 제약).
+4. 세션은 브라우저에 유지(`@supabase/ssr` 쿠키) → 재방문 시 닉네임 입력 없이 이어서 플레이.
+5. 기존 v23 localStorage 저장이 있으면 첫 로그인 때 `saves`로 가져와요.
+6. 로그인 없이 "게스트로 플레이"도 허용 — 로컬 저장만 쓰고 리더보드에는 안 올라가요.
+
+**이번에 하지 않는 것**
+- 비밀번호, 이메일, 소셜 로그인
+- 닉네임만으로 다른 기기에서 로그인 (닉네임만 알면 누구나 남의 기록을 가져갈 수 있어서 막아요)
+
+**한계와 다음 단계**
+- 브라우저 데이터를 지우거나 기기를 바꾸면 그 닉네임 계정으로 돌아갈 수 없어요. 첫 로그인 시 이 점을 한 줄로 안내하고, 설정의 "기록 내보내기"를 권해요.
+- 나중에 이어하기가 필요하면 아래 중 하나를 붙여요. 익명 세션에 그대로 연결돼서 기존 `user_id`·기록이 유지돼요.
+  - 닉네임 + 4~6자리 PIN (서버에서 해시 검증)
+  - 이메일/소셜 계정 연결 (`linkIdentity`)
+- 익명 가입 남용 방지: Supabase 익명 로그인 rate limit + (필요하면) CAPTCHA.
+
+### 5-2. 공유 Supabase 프로젝트
+
+DB는 다른 게임 테이블이 이미 있는 기존 프로젝트(`djcbmsrqyxtmnyscwrfv`)를 같이 써요. 그래서 테이블을 만들기 전에 [supabase-review.sql](supabase-review.sql)의 읽기 전용 쿼리로 먼저 검토해요.
+
+- **전용 스키마 `mini_world`** 에 테이블을 만들어요(`mini_world.profiles` 등). `public.profiles` 같은 흔한 이름과 충돌하지 않고, 정리할 때도 스키마 단위로 끝나요. Data API 노출 스키마에 `mini_world`를 추가하고, 클라이언트는 `supabase.schema('mini_world')`로 접근해요.
+- **auth는 프로젝트 공용**이에요. 다른 게임과 `auth.users`를 같이 쓰기 때문에:
+  - 닉네임 중복은 `mini_world.profiles` 안에서만 검사해요(다른 게임 닉네임과 무관).
+  - `auth.users` 트리거가 이미 있으면(가입 시 다른 게임 프로필 자동 생성 등) 익명 가입에도 실행되니 영향 확인.
+  - 익명 로그인은 프로젝트 전체 설정이라, 켜면 다른 게임에도 익명 가입이 허용돼요. 다른 게임 쪽 RLS가 `authenticated` 역할만 보고 열려 있으면 익명 사용자도 접근할 수 있어서 기존 정책을 같이 점검해요(`auth.jwt()->>'is_anonymous'`).
+- **검토 결과 (2026-11-01)**
+  - 기존 객체: `public.profiles`(id, nickname, created_at, updated_at), `public.game_scores` 2개뿐. `profiles` 이름이 겹치니 전용 스키마 방침 그대로 가요.
+  - 익명 로그인은 **이미 켜져 있어요**(사용자 21명 전원 익명). 다른 게임 RLS도 익명 사용자를 전제로 짜여 있어서 추가 영향 없음.
+  - `auth.users` 트리거·FK 없음 → 익명 가입 시 다른 게임 쪽에 부수효과 없음.
+  - `citext` 미설치 → 닉네임 중복은 `unique index on (lower(nickname))`로 처리(공용 프로젝트에 확장 추가 안 함).
+  - `public.rls_auto_enable()` 이벤트 트리거는 **`public` 스키마에만** 동작해요(정의 확인). `mini_world` 테이블은 마이그레이션에서 직접 `enable row level security` 해요.
+  - Storage는 `game-images`(비공개) 하나뿐 → 새 버킷 `mini-world-characters`(공개 읽기) 생성.
+  - 노출 스키마는 SQL로 안 보여요(`null`). 대시보드 **Settings → API → Exposed schemas**에 `mini_world` 추가 + `grant usage on schema mini_world to anon, authenticated` 및 테이블별 grant 필요.
+- **Storage 버킷**은 `mini-world-characters`처럼 접두사를 붙여요.
+- **마이그레이션**은 [`supabase/migrations/20261101000000_mini_world_init.sql`](../supabase/migrations/20261101000000_mini_world_init.sql)처럼 `mini_world` 스키마만 다루는 파일로 두고, 다른 게임 객체는 건드리지 않아요.
+
+### 테이블
+| 테이블 | 주요 컬럼 | 용도 |
+|------|------|------|
+| `mini_world.profiles` | id(=auth.uid), nickname (unique, citext), char, created_at | 닉네임, 대표 캐릭터 |
+| `mini_world.saves` | user_id PK, version, data jsonb, updated_at | 1인 1행 |
+| `mini_world.runs` | id, user_id, game_id, level, champ, score, duration_ms, seed, input_hash, flagged, created_at | 한 판 기록 |
+| `mini_world.leaderboard_weekly` (view) | game_id, champ, nickname, best_score, rank | 공개 읽기 |
+
+### 보안
+- 전 테이블 RLS: `auth.uid() = user_id`. 리더보드 뷰만 공개 읽기.
+- `runs`는 클라이언트 직접 insert 금지 → `app/api/runs` Route Handler에서만(service role). 검증: 종목별 최대 점수 상한, 판 길이 25s±여유, 분당 제출 횟수 제한. 이상치는 `flagged=true`로 넣고 순위에서 제외.
+- (선택, 후순위) seed + 입력 로그로 서버 재시뮬레이션 — 인터페이스가 결정적이라 나중에 붙일 수 있어요.
+
+---
+
+## 6. 에셋과 성능
+
+- 캐릭터 base64 → `public/characters/*.webp`, 로딩 화면에서 프리로드.
+- 폰트: v23은 글리프 단위로 쪼갠 base64 woff → 원본 폰트 서브셋 woff2로 교체, `next/font/local`로 로드.
+- 정적 페이지(리더보드 등)는 캐시/재검증으로 서빙하고, 게임 번들과 분리해요.
+- 종목 11개 동적 import → 섬 이동 시 해당 섬 종목만 로드.
+- 목표: 첫 JS ≤ 200KB gzip, 모바일(iPhone 13 에뮬) p95 프레임 ≤ 20ms. 프레임 측정 스크립트를 CI에서 돌려 회귀 차단.
+- PWA 매니페스트(선택).
+
+---
+
+## 7. 로드맵
+
+| 단계 | 할 일 | 완료 기준 |
+|------|------|------|
+| **Phase 0 · 준비 (1~2일)** | `.gitignore`에 `ref/` 추가 · Next.js+TS+pnpm 세팅 · Vercel 연결 · v23 대상 Playwright 스모크/봇 테스트는 **로컬 전용**으로 작성(v23 파일 경로를 환경 변수로 받음) · 오리지널 캐릭터 시트/플레이스홀더 준비 | Vercel URL에서 빈 셸 + 플레이스홀더 캐릭터로 월드 진입, 로컬에서 v23 기준 테스트 통과 |
+| **Phase 1 · 뼈대 분리** | 에셋 추출 · `config/` 이전 · store + save/migrate(v2/v3→v4) · 엔진 루프/입력/카메라 분리 · 헤더/사이드바/모달 React화 | v23 저장 파일 그대로 로드, 월드 이동·채집·장식·퀘스트 E2E 통과 |
+| **Phase 2 · 종목 분리** | 섬 단위로 진행: 바나나(4) → 코브(4) → 스노우(3). 종목마다 `GameModule` + 봇 테스트 | 종목별 봇 점수 분포가 v23과 같은 범위, legacy 제거 |
+| **Phase 3 · Supabase** | 닉네임 로그인(익명 세션), `profiles/saves`, RLS, 클라우드 저장, 로컬 저장 가져오기 | 닉네임 입력 → 플레이 → 새로고침/재방문 시 같은 저장 유지 |
+| **Phase 4 · 기록과 순위** | `app/api/runs` 검증, `runs`, 리더보드 페이지 | 종목별 주간 순위 노출, 비정상 점수 제외 |
+
+가장 큰 작업은 Phase 1~2예요. Phase 2를 섬 단위로 나누면 PR 크기를 작게 유지할 수 있어요.
+
+---
+
+## 8. 리스크와 결정할 것
+
+### 리스크
+- **캐릭터 IP**: "미니언"과 v23 캐릭터 이미지·이름(바르샤, 첼시, 아틀레티 등 실제 구단 연상 포함)은 제3자 권리 이슈가 있어요. 저장소를 공개로 정했으니 오리지널 캐릭터·이름으로 교체해요(§10). 프로젝트명은 `mini-world`를 그대로 써요.
+- **이전 중 회귀**: v23 기준 테스트를 먼저 만들고(Phase 0), legacy와 나란히 비교하면서 옮겨요.
+- **점수 조작**: 기본 검증 + flag/숨기기로 시작.
+- **Supabase 무료 플랜 일시중지**: 로컬 우선 구조라 게임은 계속 동작해요.
+- **저장 포맷 착오**: v1.0 문서의 "version 4"는 실제 코드와 달랐어요. 마이그레이션 테스트에 실제 v2/v3 저장 샘플을 꼭 넣어요.
+
+### 결정할 것
+- [x] 저장소 공개 (2026-11-01 결정, `jpjp92/mini-world` PUBLIC) → §10 공개 원칙 적용
+- [x] 프레임워크: Next.js App Router (2026-11-01 결정)
+- [x] 로그인: 닉네임 입력만 (2026-11-01 결정, §5-1)
+- [ ] 캐릭터 perk: 12명 모두 구현해서 켜기 vs 이전하면서 제거 (현재 부분 적용 상태)
+- [ ] 캐릭터 새 이름 확정 (§9 후보안: 킥코·커비·아띠)
+- [ ] 리더보드 검증 수준: 상한/시간 검증만(추천) vs 재시뮬레이션까지
+
+---
+
+## 9. 캐릭터·장소 이름 정리 (실제 구단 연상 제거)
+
+규칙은 그대로 두고 **표시 이름, 내부 id, 장소명, 대사**만 바꿔요. 나머지 9명(스위미, 테니, 슬러거, 아스트로, 라이더, 아처, 스키, 피겨, 태권)은 일반 명사 기반이라 그대로 둬요.
+
+| 기존 id / 이름 | 새 id / 이름 | 역할 | 기존 장소명 → 새 장소명 |
+|------|------|------|------|
+| `barca` / 바르샤 | `kicko` / 킥코 | 축구 코치 | 캄프 누 잔디 구장 (서쪽) → 바나나 그린 구장 (서쪽) |
+| `chelsea` / 첼시 | `curvy` / 커비 | 프리킥 코치 | 블루 브릿지 스타디움 → 블루웨이브 스타디움 |
+| `atletico` / 아틀레티 | `atti` / 아띠 | 섬 여행자 (기본 플레이어블) | 메트로폴리타노 광장 → 여행자 광장 |
+
+- **저장 호환**: v2/v3 저장 안의 `char`, `friendship`, `questClaims` 등 키에 옛 id가 남아 있어요. `migrate()`에 `LEGACY_ID_MAP = { barca:'kicko', chelsea:'curvy', atletico:'atti' }`를 넣어 v4로 옮길 때 바꿔요. `normalizePlayerId()`도 옛 id를 받아요.
+- **복장 색**: `barca`의 파랑+빨강 세로 줄무늬처럼 실제 유니폼을 떠올리게 하는 배색은 같이 바꿔요(예: 초록+노랑). 캐릭터 오리지널 교체(§10) 때 함께 진행해요.
+- **대사·퀘스트 문구**: `quote`, `questTitle`, 튜토리얼 문구에서 옛 이름이 나오는 곳을 모두 찾아 바꿔요. Phase 1 `config/roster.ts` 이전 단계에서 처리하고, 옛 이름이 남았는지 확인하는 테스트(문자열 검색)를 하나 둬요.
+- 이름은 후보안이에요. 확정 전까지 바꿔도 돼요.
+
+---
+
+## 10. 공개 저장소 원칙
+
+저장소가 public이라 **커밋하는 순간 공개**돼요. 히스토리에 한 번 들어가면 지워도 남는다고 보고 처음부터 넣지 않아요.
+
+- **넣지 않는 것**
+  - `ref/2d_v23.html` 원본 (미니언 이미지·이름 포함) → `.gitignore`에 `ref/` 추가. 현재 `ref/`, `docs/`는 아직 커밋 전이에요.
+  - 캐릭터 이미지 원본 파일 (§10-1, 저장소 밖에서 관리)
+  - "미니언" 명칭, 일루미네이션/유니버설 관련 표현
+  - `.env*`, Supabase service role 키 (Vercel 환경 변수로만)
+- **바꾸는 것**
+  - 게임 제목: "미니언 월드" → **"미니 월드"** (`<title>`, 메타, 문구 전체)
+  - 캐릭터 이미지: 당분간 v23 생성 이미지를 그대로 써요 (§10-1).
+  - 실제 구단 연상 이름·장소·배색: §9대로 교체
+  - 저장 키·변수명의 `minion`: 새 코드는 `mini-world-*` 사용, 옛 키는 마이그레이션 읽기용으로만 참조
+- **테스트**: v23 대비 회귀/봇 테스트는 로컬에서만 원본을 읽어 돌리고, CI에서는 이전 완료된 새 코드끼리 비교(스냅샷/봇 점수 범위)해요.
+- **라이선스**: 코드에 MIT 등 라이선스를 정하고, 에셋(이미지·폰트)은 출처와 라이선스를 `public/CREDITS.md`에 기록해요. 폰트는 OFL 등 재배포 가능한 것만 써요.
+- **커밋 전 점검**: `minion|미니언|바르샤|첼시|아틀레티|캄프 누` 문자열 검사를 pre-commit/CI에 넣어 실수로 들어가는 걸 막아요(마이그레이션 매핑 파일만 예외).
+
+### 10-1. 캐릭터 이미지 (2026-11-01 결정)
+
+v23의 생성 이미지 12장을 계속 쓰고, **로고·엠블럼만 실제와 다르게 바꿔요.**
+
+- **바꿀 것** (Phase 1, §9 이름 변경과 같은 작업)
+  - 스포츠 브랜드 로고(나이키 스우시 등) → 지우거나 오리지널 마크로
+  - 구단 엠블럼(아틀레티코·첼시·바르샤) → 게임 속 팀 엠블럼(예: 바나나 그린, 블루웨이브)으로
+  - 실제 유니폼과 같은 배색·패턴(빨강-흰 세로줄, 파랑-빨강 세로줄) → §9 새 배색으로
+  - 멜빵바지의 원작 로고 → 미니 월드 마크로
+- **유지하는 것**: 캐릭터 체형·얼굴·고글 등 나머지 외형.
+- **저장소 관리**: 이미지는 커밋하지 않고(`public/characters/` gitignore) Storage/Blob URL로 불러와요. 로드 실패 시 캔버스 도형 캐릭터로 대체.
+- **남는 리스크(기록용)**: 로고를 지워도 캐릭터 외형 자체가 원작 캐릭터와 매우 비슷해요. 트래픽이 커지거나 외부 홍보·수익화를 하게 되면 외형 교체를 다시 검토해요. 이미지가 URL·폴백 구조라 교체 비용은 작아요.
