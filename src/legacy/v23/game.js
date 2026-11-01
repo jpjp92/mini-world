@@ -1,7 +1,17 @@
 // @ts-nocheck
 /* eslint-disable */
-// v23 원본 게임 스크립트 (이름만 변경). 이 파일에서 조금씩 떼어내 src/engine, src/games 로 옮겨요.
+// v23 게임 스크립트 (이름 변경 후 직접 관리). 조금씩 떼어내 src/config, src/engine, src/games 로 옮겨요.
+// 주의: scripts/extract_v23.py 로 다시 생성하면 떼어낸 작업이 사라져요.
+import { GAMES, TIER_FEATURES, LEVEL_CHALLENGES, INTRO_GUIDES, STATION_LOOKS } from '@/config/games';
+import { ISLANDS, REGIONS, STATIONS, WEATHER_MODES } from '@/config/islands';
+import { DECOR_CATALOG } from '@/config/decor';
+
 export function bootV23(opts) {
+// 설정 데이터는 src/config 에서 가져와요. 레거시 코드가 값을 바꿔도 원본이 안 바뀌게 복사해요.
+const games=structuredClone(GAMES), tierFeatures=structuredClone(TIER_FEATURES), levelChallenges=structuredClone(LEVEL_CHALLENGES);
+const introGuides=structuredClone(INTRO_GUIDES), stationLooks=structuredClone(STATION_LOOKS);
+const islands=structuredClone(ISLANDS), regions=structuredClone(REGIONS), stations=structuredClone(STATIONS);
+const weatherModes=structuredClone(WEATHER_MODES), catalog=structuredClone(DECOR_CATALOG);
 
 const ROSTER_DATA = [{"id":"swimmer","name":"스위미","role":"코스트 챔피언","img":"","ArcadeId":"racing","zoneName":"에메랄드 해변 다이빙대","perkDesc":"해변 조개 채집 시 바나나 코인 +30% 추가 획득","quote":"푸른 바다에서 리듬에 맞춰 물살을 가르는 거야! 내 금메달 기록에 도전해 볼래?","questTitle":"해변의 반짝이는 조개 2개 채집하기","questType":"shell","questTarget":2,"colors":{"hat":"#0284c7","body":"#facc15","outfit":"#dc2626","accent":"#fbbf24","eyes":2,"hair":"swimcap"},"homePos":{"x":19,"y":12}},{"id":"kicko","name":"킥코","role":"축구 코치","img":"","ArcadeId":"soccer","zoneName":"바나나 그린 구장 (서쪽)","perkDesc":"축구 아케이드에서 조준선 속도 안정화 & 코인 +20%","quote":"축구는 정확한 패스와 타이밍이야! 먼저 마을에서 체력(CP)을 모아서 구장으로 와.","questTitle":"섬의 바나나 나무 3번 채집하기","questType":"banana","questTarget":3,"colors":{"hat":null,"body":"#facc15","outfit":"#3f8f4a","stripes":"#f4d35e","accent":"#f59e0b","eyes":2,"hair":"sparse"},"homePos":{"x":6,"y":5}},{"id":"curvy","name":"커비","role":"프리킥 코치","img":"","ArcadeId":"soccer","zoneName":"블루웨이브 스타디움","perkDesc":"스테이션 업그레이드 시 불꽃 슛 게이지 충전 속도 +35%","quote":"내 파란 머리처럼 시원한 프리킥 한 방 어때? 골키퍼의 움직임을 읽고 빈 곳을 노려봐!","questTitle":"마을에 꾸미기 가구 1개 이상 추가 배치하기","questType":"decor","questTarget":1,"colors":{"hat":null,"body":"#facc15","outfit":"#1e40af","accent":"#38bdf8","eyes":2,"hair":"spikyBlue"},"homePos":{"x":10,"y":4}},{"id":"tennis","name":"테니","role":"테니스 코치","img":"","ArcadeId":"racket","zoneName":"선샤인 테니스 코트","perkDesc":"라켓·배팅 미니게임에서 라켓 판정 범위 +25% 확대","quote":"뾰루퉁해 보인다고? 공에 집중하느라 그래! 나랑 불꽃 튀는 랠리 한 판 붙자!","questTitle":"꽃밭이나 야자수 주변 채집물 3개 모으기","questType":"any_harvest","questTarget":3,"colors":{"hat":"#ffffff","headband":"#ef4444","body":"#facc15","outfit":"#f8fafc","accent":"#d97706","eyes":1,"hair":"centerTuft","prop":"racket"},"homePos":{"x":5,"y":12}},{"id":"baseball","name":"슬러거","role":"타격 코치","img":"","ArcadeId":"racket","zoneName":"바나나 배팅 & 피칭 센터","perkDesc":"홈런 타깃 적중 시 보너스 점수 +30% 추가","quote":"글러브 꽉 꼈다! 내가 던지는 직구와 마구를 타이밍 맞춰 시원하게 날려버려!","questTitle":"바나나 나무에서 황금 바나나 2개 수확하기","questType":"banana","questTarget":2,"colors":{"hat":"#dc2626","body":"#facc15","outfit":"#1d4ed8","accent":"#92400e","eyes":1,"hair":"cap","prop":"glove"},"homePos":{"x":9,"y":13}},{"id":"atti","name":"아띠","role":"섬 여행자","img":"","ArcadeId":null,"zoneName":"여행자 광장","perkDesc":"심부름 완료 시 챌린지 포인트(CP) +5 추가 획득","quote":"섬에 온 걸 환영해! 나는 지도와 주민 심부름을 안내해 줄게. 스포츠 도전은 각 구장의 담당 친구에게 찾아가 봐!","questTitle":"주민들과 2번 이상 대화 나누기","questType":"talk","questTarget":2,"colors":{"hat":null,"body":"#facc15","outfit":"#e07a5f","stripes":"#f2cc8f","accent":"#3d405b","eyes":2,"hair":"sparse"},"homePos":{"x":13,"y":7}},{"id":"astro","name":"아스트로","role":"우주 연구원","img":"","ArcadeId":"space","zoneName":"스타라이트 연구소 & 전망대","perkDesc":"모든 스테이션 업그레이드 비용 15% 할인","quote":"우주복 지퍼 완료! 코인과 트로피를 가져오면 스테이션을 업그레이드해 줄게. 새로운 스킬과 기믹을 열어보자!","questTitle":"연구소 주변 별 조각 2개 채집하기","questType":"star","questTarget":2,"colors":{"hat":null,"body":"#facc15","outfit":"#e2e8f0","accent":"#0284c7","eyes":2,"hair":"sparse"},"homePos":{"x":19,"y":5}},{"id":"cyclist","name":"라이더","role":"사이클 코치","img":"","ArcadeId":"racing","zoneName":"해안 일주 사이클 트랙","perkDesc":"섬 탐험 이동 속도 +20% 증가 & 레이싱 부스터 강화","quote":"헬멧 착용 필수! 섬 해안도로를 전속력으로 달리는 사이클 타임어택에 도전해 봐!","questTitle":"해변과 잔디밭을 돌아다니며 자원 4개 채집하기","questType":"any_harvest","questTarget":4,"colors":{"hat":"#f8fafc","body":"#facc15","outfit":"#1d4ed8","accent":"#ef4444","eyes":2,"hair":"helmet","prop":"bike"},"homePos":{"x":15,"y":12}},{"id":"archer","name":"아처","role":"양궁 코치","ArcadeId":"archery","zoneName":"포레스트 양궁","perkDesc":"스테이션 전용 코치","quote":"활을 당긴 뒤 잠깐 숨을 고르고, 바람 반대편을 겨냥해 봐!","questTitle":"별 조각 2개 모으기","questType":"star","questTarget":2,"colors":{"body":"#facc15","outfit":"#398c76","eyes":2},"img":"","transparentSprite":true},{"id":"skier","name":"스키","role":"스키 코치","ArcadeId":"ski","zoneName":"스노우 슬라럼","perkDesc":"스테이션 전용 코치","quote":"깃발 사이를 부드럽게 통과해 봐. 급한 코너에서는 감속!","questTitle":"채집물 3개 모으기","questType":"any_harvest","questTarget":3,"colors":{"body":"#facc15","outfit":"#4984ac","eyes":2},"img":"","transparentSprite":true},{"id":"skater","name":"피겨","role":"피겨 코치","ArcadeId":"figure","zoneName":"아이스 리듬","perkDesc":"스테이션 전용 코치","quote":"판정선에 음표가 닿는 순간! 박자에 맞춰 함께 연기해 보자.","questTitle":"별 조각 2개 모으기","questType":"star","questTarget":2,"colors":{"body":"#facc15","outfit":"#e5e6e1","eyes":2},"img":"","transparentSprite":true},{"id":"taek","name":"태권","role":"태권도 코치","ArcadeId":"taekwondo","zoneName":"태권 콤보","perkDesc":"스테이션 전용 코치","quote":"예고를 읽고 정확하게 방어해. 반격 기회에 발차기를 연결하자!","questTitle":"채집물 3개 모으기","questType":"any_harvest","questTarget":3,"colors":{"body":"#facc15","outfit":"#eee8d9","eyes":1},"img":"","transparentSprite":true}];
 'use strict';
@@ -9,49 +19,19 @@ const $=id=>document.getElementById(id), clamp=(x,a,b)=>Math.max(a,Math.min(b,x)
 const W=1920,H=1280,T=64,SAVE_KEY=opts.saveKey;
 for(const n of ROSTER_DATA)n.img=opts.imageUrl(n.id);
 const roster=ROSTER_DATA;
-const regions=[
-  {id:'plaza',name:'바나나 중앙 광장',icon:'🌿',x:960,y:690,arrival:{x:960,y:760}},
-  {id:'soccer',name:'챔피언스 축구 마을',icon:'⚽',x:480,y:360,arrival:{x:500,y:470}},
-  {id:'racket',name:'선샤인 라켓 클럽',icon:'🎾',x:490,y:980,arrival:{x:500,y:1030}},
-  {id:'racing',name:'에메랄드 코스트',icon:'🏊',x:1430,y:970,arrival:{x:1400,y:1050}},
-  {id:'space',name:'스타라이트 연구소',icon:'🚀',x:1450,y:350,arrival:{x:1450,y:480}}
-];
-const games={
-  soccer:{name:'슈퍼 스트라이커',icon:'⚽',color:'#61966a',desc:'Space를 눌렀다 놓아 파워 슛! 밝은 구간에서 놓으면 +6점. 황금 링 ×2와 구석 골에도 도전하세요.',controls:'← → 조준·커브 · Space 눌렀다 놓아 슛 · 밝은 파워 구간 +6 · E 관통슛 (Lv.2)',targets:[100,170,260],champTarget:360,building:{x:340,y:220,w:280,h:180},door:{x:480,y:435}},
-  racket:{name:'선샤인 랠리',icon:'🎾',color:'#c78c68',desc:'상대 선수과 실제 랠리! 방향키와 강타로 코너를, 방향키 없이 강타하면 상대 반대편을 노려요. 수비를 뚫으면 위너 보너스!',controls:'← → 이동·코너 조준 · Space 강타 (밝은 구간 PERFECT) · E 스매시 (Lv.2)',targets:[80,150,230],champTarget:330,building:{x:345,y:810,w:280,h:170},door:{x:485,y:1015}},
-  racing:{name:'코스트 바나나 런',icon:'🏊',color:'#6faeb2',desc:'파도 허들은 점프로, 높은 바위는 레인 변경으로! 점프 정점에서 허들을 넘으면 정밀 점프 +18점. 바나나 3개로 부스터를 써요.',controls:'← → / ↑ ↓ 레인 변경 · Space 점프 · Shift 부스터 · E 무적 대시 (Lv.2)',targets:[450,600,750],champTarget:950,building:{x:1300,y:820,w:280,h:160},door:{x:1440,y:1015}},
-  space:{name:'스타라이트 점프',icon:'🚀',color:'#9d93ba',desc:'연결된 노란 별 3개를 모으면 별자리 보너스 +20점! 발판을 밟아 올라가 UFO +45점도 노려보세요. 보호막이 유성 1회를 막아줘요.',controls:'← → 공중 이동 · Space 점프/더블점프 · E 제트팩 (Lv.2)',targets:[100,180,270],champTarget:380,building:{x:1330,y:200,w:270,h:210},door:{x:1465,y:445}}
-};
-Object.assign(games,{"cycling": {"island": "cove", "unit": "m", "name": "코브 사이클 레이스", "icon": "🚲", "color": "#6b9ca8", "desc": "페달을 밟고 체력을 관리하며 추월해요. 앞선 선수 뒤에서는 바람막기로 회복해요.", "controls": "← → 조향 · Space 페달 · Shift 스프린트 · E 보호 스프린트 (Lv.2)", "targets": [480, 520, 550], "champTarget": 565, "building": {"x": 360, "y": 250, "w": 340, "h": 210}, "door": {"x": 530, "y": 505}}, "baseball": {"island": "cove", "name": "슬러거 홈런 더비", "icon": "⚾", "color": "#b28d6b", "desc": "밝은 타격 구간에서 강타! 좌우로 타구 방향을 정하고 홈런에 도전해요.", "controls": "← → 타구 방향 · Space 스윙 · E 집중 타격 (Lv.2)", "targets": [150, 220, 300], "champTarget": 400, "rule": "3스트라이크는 1아웃 · 3아웃이면 종료돼요. 25초가 끝날 때 목표 점수를 달성하면 클리어!", "building": {"x": 1240, "y": 280, "w": 330, "h": 230}, "door": {"x": 1400, "y": 555}}, "freekick": {"island": "cove", "name": "프리킥 타깃 챌린지", "icon": "🎯", "color": "#7da18a", "desc": "좌우 조준과 누르는 시간으로 슛 높이를 정해 표적을 맞혀요.", "controls": "← → 좌우 조준 · Space 눌렀다 놓아 높이 조절 · E 표적 정지 (Lv.2)", "targets": [90, 160, 230], "champTarget": 330, "building": {"x": 800, "y": 800, "w": 320, "h": 200}, "door": {"x": 960, "y": 1045}}});
-regions.push(...[{"id": "harbor", "island": "cove", "name": "코브 선착장", "icon": "⛵", "x": 400, "y": 1040, "arrival": {"x": 400, "y": 1040}}, {"id": "cycling", "island": "cove", "name": "코브 사이클 레이스", "icon": "🚲", "x": 530.0, "y": 355.0, "arrival": {"x": 530, "y": 535}}, {"id": "baseball", "island": "cove", "name": "슬러거 홈런 더비", "icon": "⚾", "x": 1405.0, "y": 395.0, "arrival": {"x": 1400, "y": 585}}, {"id": "freekick", "island": "cove", "name": "프리킥 타깃 챌린지", "icon": "🎯", "x": 960.0, "y": 900.0, "arrival": {"x": 960, "y": 1075}}]);
-const stations=[
-  {id:'soccer',npcId:'kicko',gameId:'soccer',label:'챔피언스 축구 구장',position:{x:350,y:470}},
-  {id:'racket',npcId:'tennis',gameId:'racket',label:'선샤인 테니스 코트',position:{x:420,y:1030}},
-  {id:'racing',npcId:'swimmer',gameId:'racing',label:'에메랄드 코스트',position:{x:1530,y:1060}},
-  {id:'space',npcId:'astro',gameId:'space',label:'스타라이트 연구소',position:{x:1620,y:485}}
-];
-stations.push(...[{"id": "cycling", "island": "cove", "npcId": "cyclist", "gameId": "cycling", "label": "코브 사이클 클럽", "position": {"x": 385, "y": 535}}, {"id": "baseball", "island": "cove", "npcId": "baseball", "gameId": "baseball", "label": "코브 야구장", "position": {"x": 1550, "y": 565}}, {"id": "freekick", "island": "cove", "npcId": "curvy", "gameId": "freekick", "label": "타깃 프리킥 필드", "position": {"x": 1165, "y": 1045}}]);
-Object.assign(games,{"archery": {"island": "cove", "name": "포레스트 양궁", "icon": "🏹", "color": "#7b9b75", "desc": "바람과 조준 흔들림을 읽고 과녁의 중심을 노려요.", "controls": "방향키 조준 · Space 눌렀다 놓아 발사 · E 집중 (Lv.2)", "targets": [150, 210, 270], "champTarget": 350, "building": {"x": 815, "y": 225, "w": 285, "h": 220}, "door": {"x": 960, "y": 490}}, "ski": {"island": "snow", "name": "스노우 슬라럼", "icon": "⛷️", "color": "#82a8bd", "desc": "좌우로 회전해 깃발 사이를 지나고 바위는 피해요.", "controls": "← → 회전 · Space 누르는 동안 감속 · E 보호 활강 (Lv.2)", "targets": [180, 230, 280], "champTarget": 350, "building": {"x": 330, "y": 250, "w": 360, "h": 250}, "door": {"x": 510, "y": 550}}, "figure": {"island": "snow", "name": "아이스 리듬", "icon": "⛸️", "color": "#a596c0", "desc": "음표가 판정선에 닿을 때 표시된 키를 눌러 연기를 이어가요.", "controls": "← → 스텝 · Space 점프 · E 리듬 집중 (Lv.2)", "targets": [180, 260, 340], "champTarget": 450, "building": {"x": 1220, "y": 280, "w": 360, "h": 230}, "door": {"x": 1400, "y": 560}}, "taekwondo": {"island": "snow", "name": "태권 콤보", "icon": "🥋", "color": "#b5937f", "desc": "상대의 예고를 보고 방어한 뒤 반격 기회에 발차기를 해요.", "controls": "↑ 상단 방어 · ↓ 하단 방어 · Space 반격 · E 강한 반격 (Lv.2)", "targets": [180, 280, 380], "champTarget": 480, "rule": "하트 3개 · 공격을 방어하고 반격해 득점해요. 체력이 남은 채로 25초 후 목표를 달성하면 클리어!", "building": {"x": 800, "y": 810, "w": 320, "h": 190}, "door": {"x": 960, "y": 1045}}});
-stations.push(...[{"id": "archery", "npcId": "archer", "gameId": "archery", "island": "cove", "label": "포레스트 양궁", "position": {"x": 1130, "y": 500}}, {"id": "ski", "npcId": "skier", "gameId": "ski", "island": "snow", "label": "스노우 슬라럼", "position": {"x": 350, "y": 570}}, {"id": "figure", "npcId": "skater", "gameId": "figure", "island": "snow", "label": "아이스 리듬", "position": {"x": 1590, "y": 570}}, {"id": "taekwondo", "npcId": "taek", "gameId": "taekwondo", "island": "snow", "label": "태권 콤보", "position": {"x": 1160, "y": 1055}}]);
-regions.push(...[{"id": "snowharbor", "island": "snow", "name": "스노우 선착장", "icon": "⛴", "x": 400, "y": 1040, "arrival": {"x": 400, "y": 1040}}, {"id": "archery", "island": "cove", "name": "포레스트 양궁", "icon": "🏹", "x": 957.5, "y": 335.0, "arrival": {"x": 960, "y": 520}}, {"id": "ski", "island": "snow", "name": "스노우 슬라럼", "icon": "⛷️", "x": 510.0, "y": 375.0, "arrival": {"x": 510, "y": 580}}, {"id": "figure", "island": "snow", "name": "아이스 리듬", "icon": "⛸️", "x": 1400.0, "y": 395.0, "arrival": {"x": 1400, "y": 590}}, {"id": "taekwondo", "island": "snow", "name": "태권 콤보", "icon": "🥋", "x": 960.0, "y": 905.0, "arrival": {"x": 960, "y": 1075}}]);
+
+
+
+
+
+
+
+
+
 const worldNpcs=stations.map(station=>roster.find(n=>n.id===station.npcId));
 const basePlayableIds=['atti'];
-const weatherModes=[
-  {id:'sunny',name:'☀ 맑은 낮',desc:'바나나 채집 코인 +10%',tint:'rgba(255,248,210,0.04)',bonusType:'banana',mult:1.1},
-  {id:'sunset',name:'🌇 노을빛 저녁',desc:'아케이드 경기 보상 코인 +20%',tint:'rgba(235,140,85,0.16)',bonusType:'arcade',mult:1.2},
-  {id:'night',name:'🌙 별빛 밤',desc:'별 조각 채집 보상 +50%',tint:'rgba(25,42,78,0.34)',bonusType:'star',mult:1.5},
-  {id:'rain',name:'🌧 산들비',desc:'조개 채집 보상 +40% · 나무 회복 가속',tint:'rgba(70,115,145,0.18)',bonusType:'shell',mult:1.4}
-];
-const catalog=[
-  {id:'flower',name:'작은 꽃밭',cost:25,appeal:15,icon:'🌼',actionDesc:'향기 맡기 (+8 🍌)'},
-  {id:'lamp',name:'숲속 가로등',cost:40,appeal:25,icon:'🏮',actionDesc:'따스한 불빛 감상 (+5 ⚡)'},
-  {id:'bench',name:'피크닉 벤치',cost:55,appeal:35,icon:'🪑',actionDesc:'잠시 쉬어가기 (+12 ⚡ 회복)'},
-  {id:'goal',name:'우리 동네 골대',cost:70,appeal:45,icon:'🥅',actionDesc:'미니 슈팅 연습 (+15 🍌)'},
-  {id:'arcade',name:'레트로 오락기',cost:90,appeal:60,icon:'🕹️',actionDesc:'섬 지도 & 그랜드 랭킹 열기'},
-  {id:'fountain',name:'바나나 분수',cost:130,appeal:90,icon:'⛲',actionDesc:'행운의 동전 던지기 (+25 🍌)'},
-  {id:'trophy_stand',name:'챔피언 단상',cost:160,appeal:120,icon:'🏆',actionDesc:'챔피언의 기운 받기 (+15 ⚡)'},
-  {id:'hammock',name:'해변 파라솔',cost:65,appeal:40,icon:'⛱️',actionDesc:'바닷바람 휴식 (+10 ⚡ · +10 🍌)'}
-];
+
+
 const trees=[{x:280,y:310},{x:750,y:255},{x:830,y:420},{x:255,y:635},{x:580,y:660},{x:1240,y:300},{x:1690,y:300},{x:1650,y:700},{x:1220,y:800},{x:245,y:950},{x:800,y:1080},{x:1700,y:975},{x:1100,y:1090},{x:480,y:1130}].map((t,i)=>({...t,id:'tree'+i,palm:i>=8,readyAt:0}));
 const resourceDefs=[{x:790,y:730,type:'banana'},{x:1060,y:790,type:'banana'},{x:630,y:560,type:'banana'},{x:345,y:680,type:'banana'},{x:1170,y:590,type:'banana'},{x:1695,y:1080,type:'shell'},{x:1580,y:1135,type:'shell'},{x:1250,y:1140,type:'shell'},{x:260,y:1110,type:'shell'},{x:1470,y:530,type:'star'},{x:1690,y:430,type:'star'},{x:1260,y:475,type:'star'},{x:1540,y:650,type:'banana'},{x:750,y:960,type:'banana'},{x:960,y:1000,type:'banana'},{x:1080,y:355,type:'banana'}];
 const resources=resourceDefs.map((r,i)=>({...r,id:'resource'+i,readyAt:0}));
@@ -70,13 +50,8 @@ function normalizePlayerId(id){return isCharUnlocked(id)?id:basePlayableIds[0];}
 
 // v4.3.1: distinct level challenges, readable round sections and native arcade art.
 const tierNames=['동네 연습장','프로 아레나','마스터 스타디움'];
-const tierFeatures={
- soccer:[['기본 파워 슛 · 고정 황금 링','링 통과 ×2 · 구석 슛 보너스'],['불꽃 관통슛 · 움직이는 링','중반부터 이동 수비벽 등장'],['골든 코너 득점 +12','3골마다 멀티볼 피버']],
- racket:[['느린 서브 · 기본 랠리','타이밍 강타 · 위너 보너스'],['중반부터 코너 리턴 · 스매시','파워 스매시 · 파워업 캡슐'],['강한 수비 · 빈 코스 공략','후반 황금 공과 두 공 랠리']],
- racing:[['한 레인 장애물 · 점프 연습','바나나 3개로 부스터 충전'],['두 레인 장애물 · 회복 구간','무적 대시 · 보호막'],['갈림길 바나나 · 연속 허들','바나나 자석 · 후반 가속']],
- space:[['고정 발판 · 느린 유성','노란 별 · 별자리 완성 보너스'],['움직이는 발판 · 더블 점프','제트팩 · 유성 도착 예고'],['별 흡입 피버 · 빠른 별자리','우주선 · 유성 패턴 도전']]
-};
-Object.assign(tierFeatures,{"cycling": [["페달링 · 체력과 추월", "25초 주행 · 세 번 충돌 시 종료"], ["해안 커브 · 바람막기 회복", "충돌 보호 스프린트 해금"], ["역풍 · 두 레인 장애물", "코브 챔피언 레이스"]], "baseball": [["직구 타이밍 · 홈런 보너스", "3스트라이크 · 3아웃 종료"], ["커브볼 · 타구 방향 보너스", "집중 타격 해금"], ["강속구 · 연속 타격 보너스", "코브 챔피언 홈런 더비"]], "freekick": [["고정 표적 · 슛 높이 조절", "정중앙 명중 보너스"], ["움직이는 표적", "표적 정지 스킬 해금"], ["낮은 슛을 막는 수비벽", "세 번째 표적 ×2 보너스"]]});
+
+
 function upgradeCost(id){const level=state.levels[id];return level>=3?null:{coins:Math.round((level===1?140:280)*(state.char==='astro'?.85:1)),trophies:level===1?1:3};}
 function arcadeRecordKey(id,level,champ){return `${id}:${level}:${champ?'champ':'normal'}`;}
 function cleanArcadeRecords(raw){const out={};if(!raw||typeof raw!=='object')return out;for(const [key,r]of Object.entries(raw)){if(!/^(soccer|racket|racing|space|cycling|baseball|freekick|archery|ski|figure|taekwondo):[123]:(normal|champ)$/.test(key)||!r||typeof r!=='object')continue;out[key]={};for(const field of ['best','plays','wins','maxCombo','lastScore'])out[key][field]=Math.max(0,Math.floor(Number(r[field])||0));}return out;}
@@ -329,13 +304,8 @@ function runStatsHtml(a){if(isExpansionGame(a.id))return expansionStatsHtml(a);i
 
 // Three readable sections per 25-second run; no extra modal or global message.
 const roundSections=['워밍업','리듬 업','피날레'];
-const levelChallenges={
- soccer:[['기본 슈팅','고정 링으로 파워 슛 연습'],['움직이는 수비','중반부터 수비벽을 피해 슛'],['골든 코너','빛나는 코너로 득점하면 +12점']],
- racket:[['첫 랠리','차분한 리턴으로 타이밍 익히기'],['코너 대결','중반부터 상대 스매시와 캡슐 등장'],['센터 코트','후반 황금 공과 두 공 랠리 도전']],
- racing:[['해안 산책','한 레인 장애물로 점프와 회피 연습'],['파도 질주','두 레인 패턴과 회복 구간 번갈아 등장'],['코스트 파이널','갈림길 바나나와 연속 허들 공략']],
- space:[['달빛 발판','고정 발판과 느린 유성으로 점프 연습'],['궤도 탐험','움직이는 발판과 더블 점프 활용'],['별자리 항해','후반 별자리와 유성 패턴에 도전']]
-};
-Object.assign(levelChallenges,{"cycling": [["첫 페달", "체력을 아끼며 장애물을 피해 달려요"], ["해안 추월", "앞선 선수 뒤에서 회복하며 추월해요"], ["코브 그랑프리", "역풍과 두 레인 패턴을 공략해요"]], "baseball": [["첫 홈런", "직구가 밝은 구간에 올 때 스윙해요"], ["커브 공략", "커브 타이밍과 황금 타구 방향을 노려요"], ["파워 히터", "빠른 투구를 연속으로 받아쳐요"]], "freekick": [["첫 타깃", "좌우 조준과 슛 높이를 익혀요"], ["무빙 타깃", "움직이는 표적을 멈춰 정밀하게 맞혀요"], ["골든 타깃", "수비벽을 넘겨 황금 표적을 맞혀요"]]});
+
+
 function roundSection(a){return a.elapsed<8?0:a.elapsed<17?1:2;}
 function roundTempo(a){return .92+.08*Math.min(1,a.elapsed/8)+.08*clamp((a.elapsed-17)/8,0,1);}
 function soccerKeeper(a){const speed=[1.25,1.65,1.95][a.level-1]*(a.champ?1.15:1);return .5+Math.sin(a.elapsed*speed)*[.18,.21,.22][a.level-1];}
@@ -787,9 +757,9 @@ function openPlazaQuiz(returnNpc=null){
 }
 window.addEventListener('keydown',e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||runtime.modal!=='quiz-round'||!['Digit1','Digit2','Digit3','Numpad1','Numpad2','Numpad3'].includes(e.code))return;e.preventDefault();answerQuiz(Number(e.code.slice(-1))-1);});
 
-const islands={banana:{name:'바나나 아일랜드',icon:'🌿',tag:'축구·테니스·바나나런·점프',port:{x:1477,y:1110},arrival:{x:1477,y:1080}},cove:{name:'챔피언 코브',icon:'⛵',tag:'페달을 밟고, 홈런을 치고, 프리킥을 겨뤄요',port:{x:400,y:1080},arrival:{x:400,y:1040}}};
-islands.cove.tag='사이클·야구·프리킥·양궁';
-islands.snow={name:'스노우 피크',icon:'🏔️',tag:'스키·피겨·태권도',port:{x:400,y:1080},arrival:{x:400,y:1040}};
+
+
+
 const coveIds=['cycling','baseball','freekick','archery'];
 const expansionIds=['archery','ski','figure','taekwondo'];
 function isExpansionGame(id){return expansionIds.includes(id);}
@@ -1009,25 +979,10 @@ function drawCoveArcade(a,w,h,now){
 function drawBaseball(x,y,r){ellipse(ac,x+2,y+5,r,r*.4,'#23445130');ellipse(ac,x,y,r,r,'#fff7df');ac.save();ac.strokeStyle='#c38570';ac.lineWidth=1.4;for(const sign of [-1,1]){ac.beginPath();ac.ellipse(x+sign*r*.75,y,r*.42,r*.8,0,-Math.PI/2,Math.PI/2);ac.stroke();}ac.restore();}
 
 // v4.3.1 — one more sport in the cove, three distinct sports on Snow Peak.
-Object.assign(tierFeatures,{
- archery:[['정지 과녁 · 활 당기기와 집중','안정 구간에서 발사 · 중심 50점'],['좌우 바람 · 예측 착탄점','집중 스킬 · 바람 영향 제거'],['이동 과녁 · 연속 명중','세 번째 명중은 황금 과녁']],
- ski:[['넓은 깃발 간격 · 완만한 회전','길게 눌러 감속 · 하트 3개'],['좁은 깃발 · 바위 회피','보호 활강 스킬'],['빙판 관성 · 연속 급커브','정중앙 통과 · 콤보 보너스']],
- figure:[['점프와 좌우 스텝 · 느린 박자','PERFECT 20점 · GOOD 10점'],['빨라지는 박자 · 교차 스텝','리듬 집중 · 판정 범위 확대'],['짧은 간격의 복합 연기','5콤보마다 연기 보너스']],
- taekwondo:[['랜덤 상단·하단 공격','PERFECT 막기 · 최대 3연타'],['상단·하단 연속 공격','반격 기회에 강한 발차기'],['페인트와 늦은 공격','정확한 방어 · 연속 반격 보너스']]
-});
-Object.assign(levelChallenges,{
- archery:[['숲속 첫 화살','활을 당긴 뒤 안정 구간에서 놓아요'],['바람 읽기','착탄점을 보고 바람을 보정해요'],['움직이는 중심','이동 과녁과 황금 과녁을 노려요']],
- ski:[['첫 활강','깃발 사이를 지나고 바위는 피해요'],['알파인 코너','좁은 코너에서는 감속해요'],['설산 파이널','빙판의 관성을 읽고 미리 회전해요']],
- figure:[['첫 스텝','음표가 판정선에 닿을 때 눌러요'],['아이스 댄스','점프와 좌우 스텝을 연결해요'],['그랑프리 연기','빠른 박자와 5콤보 보너스에 도전해요']],
- taekwondo:[['기본 공방','닿기 직전에 막으면 PERFECT · 반격은 3연타까지'],['연속 공격','두 번째 공격은 반대쪽이에요'],['마스터 대련','페인트와 한 박자 늦은 공격을 읽어요']]
-});
-const expansionGuides={
- archery:{brief:'바람과 조준 흔들림을 읽고 과녁 중심을 노려요.',tip:'0.5~1.3초 당기면 안정 · 오래 버티면 다시 흔들려요 · 점선은 바람을 반영한 착탄점',controls:[['방향키','상하좌우 조준'],['Space','눌러 활 당기기 → 놓아 발사'],['E','집중 · 바람과 흔들림 제거',true]]},
- ski:{brief:'좌우로 회전해 깃발 사이를 통과하며 설원을 내려가요.',tip:'자동으로 활강해요 · 감속으로 급커브 공략 · 바위에 3번 부딪히면 종료',controls:[['← →','좌우 회전'],['Space','누르는 동안 감속'],['E','보호 활강 · 2초 동안 충돌 방어',true]]},
- figure:{brief:'음악에 맞춰 세 줄로 흘러오는 음표가 판정선에 닿을 때 그 줄의 키를 눌러요.',tip:'← / → 스텝, ● 점프 · PERFECT 20점 · 틀리거나 놓치면 콤보가 끊겨요',controls:[['← →','표시된 방향의 스텝'],['Space','● 음표에서 점프'],['E','리듬 집중 · 판정 범위 확대',true]]},
- taekwondo:{brief:'↑ 상단, ↓ 하단으로 막고, 반격 기회에 발차기를 최대 3번 이어 차요.',tip:'공격이 닿기 직전에 막으면 PERFECT · 반격 점수 1.5배 · 하트 3개',controls:[['↑ / W','상단 방어 · 반격 때 머리 차기 15점'],['↓ / S','하단 방어 · 반격 때 몸통 차기 10점'],['Space','반격 때 몸통 차기 · 3타째 +10'],['E','반격 기회에 강한 발차기',true]]}
-};
-const expansionLooks={archery:['목재 사대 · 숲속 과녁','바람 깃발 · 차양 사대','금빛 과녁 · 챔피언 전광판'],ski:['입문 슬로프 · 깃발 게이트','알파인 코스 · 리프트','금빛 결승선 · 설산 관람석'],figure:['작은 야외 빙상장','조명과 관람석 · 푸른 링크','금빛 지붕 · 그랑프리 링크'],taekwondo:['목재 도장 · 작은 매트','청홍 매트 · 점수판','검은 기와 지붕 · 금빛 현판']};
+
+
+
+
 
 function islandPassport(island=state.island){
  if(runtime.mode!=='world'||!islands[island])return;
@@ -1772,14 +1727,9 @@ function harvest(type,pos,coin,cp){
   checkMissions();dirty();
 }
 function survivalNote(id){return id==='racing'||id==='space'?' · 하트 3개 · 쉴드 아이템 방어 가능 · 25초 생존 시 클리어':'';}
-const introGuides={
-  soccer:{brief:'파워와 커브를 조절해 골키퍼의 빈 곳을 노려요.',tip:'황금 링 ×2 · 구석 골과 정밀 파워 슛 보너스',controls:[['← →','이동 · 커브 조준'],['Space','눌렀다 놓아 파워 슛'],['E','불꽃 관통슛',true]]},
-  racket:{brief:'상대 선수과 랠리하며 빈 코스로 강타해요.',tip:'밝은 구간은 PERFECT · 방향키 없이 강타하면 빈 코스 공략',controls:[['← →','이동 · 강타 방향 조준'],['Space','타이밍 강타'],['E','내 타격 구간에서 파워 스매시',true]]},
-  racing:{brief:'바나나를 모으며 허들은 넘고, 바위는 피해 달려요.',tip:'보호막은 충돌 1회 방어 · 바나나 3개로 부스터 충전',controls:[['← → / ↑ ↓','레인 변경'],['Space','점프 · 낮은 허들 넘기'],['Shift','충전한 부스터 사용'],['E','무적 대시',true]]},
-  space:{brief:'발판을 밟고 올라가 노란 별과 UFO를 모아요.',tip:'연결별 3개는 +20점 · 보호막은 유성 1회 방어',controls:[['← →','공중 이동'],['Space','점프 · Lv.2부터 더블 점프'],['E','제트팩',true]]}
-};
-Object.assign(introGuides,{"cycling": {"brief": "적정 박자로 페달을 밟고, 오르막에서는 체력을 아끼며, 앞선 선수 뒤 바람막기 구역에서 회복해 결승선을 노려요.", "tip": "앞선 선수 뒤에서 체력 회복 · 스프린트는 체력 25 사용", "controls": [["← →", "핸들 조향"], ["Space", "페달 밟기 · 반복해서 누르기"], ["Shift", "체력 25로 스프린트"], ["E", "충돌 보호 스프린트", true]]}, "baseball": {"brief": "밝은 타격 구간에서 강타! 좌우로 타구 방향을 정하고 홈런에 도전해요.", "tip": "직구·커브의 도착 타이밍을 읽어요 · 3아웃이면 종료", "controls": [["← →", "타구 방향 선택"], ["Space", "타이밍 스윙"], ["E", "집중 타격 · 타이밍 범위 확대", true]]}, "freekick": {"brief": "좌우 조준과 누르는 시간으로 슛 높이를 정해 표적을 맞혀요.", "tip": "누르는 시간이 슛 높이 · 표적 중심은 50점", "controls": [["← →", "골대 안 좌우 조준"], ["Space", "눌렀다 놓아 슛 높이 조절"], ["E", "표적 잠시 멈추기", true]]}});
-Object.assign(introGuides,expansionGuides);
+
+
+
 function gameIntro(id){
   const g=games[id],lv=state.levels[id],guide=introGuides[id],canChamp=championOpen(id);
   runtime.champMode=Boolean(runtime.champMode&&canChamp);
@@ -1874,14 +1824,9 @@ function buildGround(){
   for(const [id,g]of activeGameEntries())drawStadium(gc,id,g);
 }
 // The same renderer drives the island, minimap and upgrade appearance preview.
-const stationLooks={
- soccer:['목재 울타리와 작은 잔디 연습장','확장 관람석 · 투광등 · 스코어보드','곡선 지붕 · 대형 전광판 · 우승 트로피'],
- racket:['클레이 코트와 작은 벤치','하드 코트 · 차양 관람석 · 점수판','아치형 지붕 · 센터 코트 · 우승 배너'],
- racing:['3레인 해안 트랙 · 목재 데크','출발 게이트 · 레인 번호 · 관람석','황금 피니시 게이트 · 기록 전광판 · 우승 배너'],
- space:['작은 천문 돔과 별 관측실','확장 관측 돔 · 태양광 패널 · 통신 안테나','발사대와 로켓 · 궤도 링 · 우주 관제실']
-};
-Object.assign(stationLooks,{"cycling": ["바닷길 사이클 트랙", "관람석 · 해안 커브 코스", "금빛 결승선 · 그랑프리 전광판"], "baseball": ["작은 모래 다이아몬드", "확장 관람석 · 타격 전광판", "야간 구장 · 금빛 홈런 배너"], "freekick": ["잔디와 타깃 골대", "관람석 · 움직이는 표적", "금빛 표적 · 프리킥 아레나"]});
-Object.assign(stationLooks,expansionLooks);
+
+
+
 function stadiumLight(c,x,y,level){
   line(c,[[x,y+24],[x,y-12]],'#526d68',4);rr(c,x-12,y-19,24,12,3,'#657c79','#dbe6cb');
   for(let i=0;i<3;i++)rr(c,x-9+i*7,y-16,5,5,1,level===3?'#ffe4a0':'#f4efc9');

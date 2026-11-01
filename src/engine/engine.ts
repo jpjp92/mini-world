@@ -1,10 +1,13 @@
 // Phase 0 엔진 셸: rAF 루프, 입력, 카메라, 월드 배경, 플레이어 이동.
 // React 밖에서 돌고, React는 start/stop만 호출해요.
 import { getCharacter, ROSTER } from '@/config/roster';
-import { PLAYER_SPEED, PLAYER_START, REGIONS, WORLD_H, WORLD_W } from '@/config/world';
+import { REGIONS as ALL_REGIONS } from '@/config/islands';
+import { PLAYER_SPEED, PLAYER_START, WORLD_H, WORLD_W } from '@/config/world';
 import { drawCharacter, type Dir } from '@/world/character';
 import { ellipse, rr, text } from './draw';
 import { createInput, moveAxis } from './input';
+
+const REGIONS = ALL_REGIONS.filter((r) => (r.island ?? 'banana') === 'banana');
 
 export interface EngineOptions {
   canvas: HTMLCanvasElement;

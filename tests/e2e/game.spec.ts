@@ -45,3 +45,14 @@ test.describe('게임 (v23 레거시 모듈)', () => {
     expect(saved).toContain('"kicko"');
   });
 });
+
+test('캐릭터 이미지가 없으면 SVG 초상화로 대체해요', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#playerName')).toHaveText('아띠');
+  const portrait = page.locator('#playerPortrait');
+  await expect(portrait).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  const broken = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLImageElement>('.legacy-root img')].filter((i) => i.complete && i.naturalWidth === 0).length,
+  );
+  expect(broken).toBe(0);
+});

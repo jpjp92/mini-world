@@ -23,7 +23,7 @@ pnpm dev                     # http://localhost:3000
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | 라우트 타입 생성 + `tsc --noEmit` |
 | `pnpm test` | Vitest 단위 테스트 (`tests/unit`) |
-| `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행) |
+| `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행). `pnpm dev` 실행 중이면 빌드가 멈출 수 있어요 → dev를 끄거나 `pnpm build && pnpm start -p 3100`을 먼저 띄우고 실행 |
 | `pnpm test:legacy` | v23 원본 기준 테스트 (로컬 전용, `ref/2d_v23.html` 필요) |
 | `python3 scripts/extract_v23.py .` | v23 원본 → `src/legacy/v23/` 다시 생성 (로컬 전용) |
 | `pnpm add <pkg>` / `pnpm add -D <pkg>` | 패키지 추가 |
