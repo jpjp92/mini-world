@@ -1,0 +1,83 @@
+# 미니 월드 개발 가이드
+
+> 마지막 업데이트: 2026-11-01 · 기획 상세는 [plan_2026-11-01.md](plan_2026-11-01.md)
+
+## 1. 시작하기
+
+```bash
+pnpm install
+cp .env.example .env.local   # 값 채우기 (아래 4장)
+pnpm dev                     # http://localhost:3000
+```
+
+- 패키지 매니저는 **pnpm만** 써요. `npm install`은 `package-lock.json`을 만들어 `pnpm-lock.yaml`과 꼬여요.
+- Node.js 24 기준.
+
+## 2. 명령어
+
+| 명령 | 하는 일 |
+|------|------|
+| `pnpm dev` | 개발 서버 (Turbopack) |
+| `pnpm build` | 프로덕션 빌드 |
+| `pnpm start` | 빌드 결과 실행 |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | 라우트 타입 생성 + `tsc --noEmit` |
+| `pnpm test` | Vitest 단위 테스트 (`tests/unit`) |
+| `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행) |
+| `pnpm test:legacy` | v23 원본 기준 테스트 (로컬 전용, `ref/2d_v23.html` 필요) |
+| `pnpm add <pkg>` / `pnpm add -D <pkg>` | 패키지 추가 |
+| `pnpm exec playwright install chromium` | Playwright 브라우저 설치 (처음 한 번) |
+
+## 3. 프로젝트 구조
+
+```
+mini-world/
+  src/
+    app/          # Next.js App Router (layout, page). 게임 페이지는 클라이언트 전용
+    ui/           # React UI. GameRoot(SSR 끔) → GameCanvas(엔진 시작/정리)
+    engine/       # rAF 루프, 입력, 그리기 헬퍼. React·Next 의존 금지
+    world/        # 월드 요소 (캐릭터, 이후 섬·NPC·장식)
+    games/        # (Phase 2) 종목 모듈 11개
+    store/        # (Phase 1) Zustand, 저장/마이그레이션
+    config/       # roster, world 등 밸런스·데이터 상수
+  tests/unit/  tests/e2e/
+  docs/           # 기획(plan_날짜), 작업 일지(log_날짜), 이 가이드
+```
+
+### 설계 원칙
+- **엔진과 React 분리**: 매 프레임 루프는 React 밖에서 돌고, React는 메뉴·모달·HUD만 그려요.
+- **`src/engine`, `src/games`는 Next.js를 import하지 않아요** (프레임워크 독립).
+- **상태 두 층**: 저장되는 `state`(코인·레벨·기록)는 store, 저장 안 되는 `runtime`(입력·카메라·진행 중 판)은 엔진 내부.
+- **밸런스 값은 `src/config/`에만.** 이전 중에는 v23 숫자를 바꾸지 않아요.
+- **캐릭터 이미지**: 저장소에 넣지 않고 `NEXT_PUBLIC_CHARACTER_BASE_URL`에서 `<id>.webp`로 불러와요. 없으면 도형 캐릭터.
+
+## 4. 환경 변수
+
+| 변수 | 단계 | 공개 여부 |
+|------|------|------|
+| `NEXT_PUBLIC_CHARACTER_BASE_URL` | Phase 0 | 공개 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Phase 3 | 공개 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Phase 3 | 공개 (RLS 보호) |
+| `SUPABASE_SECRET_KEY` | Phase 4 | **서버 전용**, `NEXT_PUBLIC_` 금지 |
+
+- 로컬: `.env.local` (또는 `.env`). 둘 다 git 제외.
+- Vercel: Project Settings → Environment Variables (Production·Preview).
+
+## 5. Supabase
+
+- 다른 게임과 같이 쓰는 공유 프로젝트. 미니 월드 객체는 **`mini_world` 스키마**와 **`mini-world-characters` 버킷**에만 만들어요.
+- 테이블: `profiles`, `saves`, `runs` + 뷰 `leaderboard_weekly`. 전부 RLS.
+- 클라이언트 접근: `supabase.schema('mini_world')`. 대시보드 Settings → Data API → Exposed schemas에 `mini_world`가 있어야 해요.
+- 마이그레이션 SQL과 검토 쿼리는 저장소에 넣지 않고 로컬(`supabase/`, `docs/supabase-review.sql`)에 보관해요.
+
+## 6. 저장소 규칙
+
+- 공개 저장소예요. 커밋 금지: `ref/`(v23 원본), `public/characters/`, `supabase/`, `.env*`.
+- 원작·실제 구단 이름(미니언, 바르샤 등)은 `src/`에 넣지 않아요. `tests/unit/no-legacy-names.test.ts`가 검사해요.
+- push는 직접 해요.
+
+## 7. 문서 규칙
+
+- 기획: `docs/plan_YYYY-MM-DD.md`
+- 작업 일지: `docs/log_YYYY-MM-DD.md` (그날 한 일, 결정, 다음 할 일)
+- 가이드: `docs/guide.md` (명령어·구조가 바뀌면 같이 갱신)
