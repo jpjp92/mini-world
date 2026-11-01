@@ -1,0 +1,511 @@
+/* 모험 노트. 토큰은 src/ui/theme.css 의 --mw-* 를 써요. */
+
+.journal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 0;
+}
+
+.titleRow h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mw-ink);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--mw-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--mw-surface);
+  border: 1px solid var(--mw-line);
+  border-radius: var(--mw-radius-lg);
+  box-shadow: var(--mw-shadow-sm);
+  padding: 16px;
+}
+
+.label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--mw-muted);
+  margin-bottom: 8px;
+}
+
+/* 미션 카드: 은은한 그라데이션 + 강조 진행 바 */
+.mission {
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--mw-accent-soft) 0%, transparent 60%),
+    var(--mw-surface);
+}
+
+.missionTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mw-ink);
+}
+
+.missionDesc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mw-muted);
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mw-track);
+  overflow: hidden;
+}
+
+.progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mw-accent), var(--mw-accent-2));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.missionMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--mw-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.reward {
+  font-weight: 600;
+  color: var(--mw-accent-ink);
+}
+
+/* 세그먼트 탭 */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--mw-track);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.tab,
+.tabActive {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.tab {
+  background: transparent;
+  color: var(--mw-muted);
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--mw-ink);
+}
+
+.tabActive {
+  background: var(--mw-surface);
+  color: var(--mw-ink);
+  box-shadow: var(--mw-shadow-xs);
+}
+
+.panel {
+  min-height: 120px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.questRow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  transition: background 0.2s;
+}
+
+.questRow:hover {
+  background: var(--mw-hover);
+}
+
+.portrait {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--mw-track);
+  box-shadow: inset 0 0 0 1px var(--mw-line);
+}
+
+.questInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.questInfo b {
+  font-size: 13.5px;
+  color: var(--mw-ink);
+}
+
+.questInfo small {
+  font-size: 12px;
+  color: var(--mw-muted);
+  line-height: 1.4;
+}
+
+.questProgress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--mw-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.miniBar {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mw-track);
+  overflow: hidden;
+  flex: none;
+}
+
+.miniBar i {
+  display: block;
+  height: 100%;
+  background: var(--mw-accent);
+}
+
+.chipMuted {
+  align-self: flex-start;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--mw-track);
+  color: var(--mw-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 버튼 */
+.btnPrimary,
+.btnGhost,
+.btnWide,
+.btnWideActive {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.btnPrimary {
+  border: 0;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mw-accent), var(--mw-accent-2));
+  box-shadow: 0 4px 12px -4px var(--mw-accent);
+}
+
+.btnGhost {
+  border: 1px solid var(--mw-line);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--mw-ink);
+  background: var(--mw-surface);
+}
+
+.btnGhost:hover:not(:disabled) {
+  border-color: var(--mw-accent);
+  color: var(--mw-accent-ink);
+}
+
+.btnWide,
+.btnWideActive {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  font-size: 13px;
+  border: 1px solid var(--mw-line);
+  background: var(--mw-surface);
+  color: var(--mw-ink);
+}
+
+.btnWide:hover:not(:disabled) {
+  background: var(--mw-hover);
+}
+
+.btnWideActive {
+  border-color: var(--mw-danger);
+  color: var(--mw-danger);
+  background: var(--mw-danger-soft);
+}
+
+.btnPrimary:active:not(:disabled),
+.btnGhost:active:not(:disabled),
+.btnWide:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--mw-muted);
+}
+
+.hint kbd {
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--mw-line);
+  background: var(--mw-track);
+}
+
+/* 꾸미기 타일 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tile,
+.tileActive {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px;
+  text-align: left;
+  font: inherit;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.tile {
+  border: 1px solid var(--mw-line);
+  background: var(--mw-surface);
+}
+
+.tile:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--mw-shadow-sm);
+}
+
+.tileActive {
+  border: 1.5px solid var(--mw-accent);
+  background: var(--mw-accent-soft);
+  box-shadow: 0 0 0 3px var(--mw-accent-ring);
+}
+
+.tileIcon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.tile b,
+.tileActive b {
+  font-size: 13px;
+  color: var(--mw-ink);
+}
+
+.tile small,
+.tileActive small {
+  font-size: 11px;
+  color: var(--mw-muted);
+  line-height: 1.4;
+}
+
+.tileDesc {
+  opacity: 0.85;
+}
+
+/* 업그레이드 카드 */
+.upgrade {
+  border: 1px solid var(--mw-line);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.upgradeHead {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.upgradeHead b {
+  display: block;
+  font-size: 13.5px;
+  color: var(--mw-ink);
+}
+
+.upgradeHead small {
+  font-size: 11.5px;
+  color: var(--mw-muted);
+}
+
+.upgradeIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--mw-track);
+  font-size: 18px;
+}
+
+.levelDots {
+  display: flex;
+  gap: 4px;
+}
+
+.levelDots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mw-track);
+  box-shadow: inset 0 0 0 1px var(--mw-line);
+}
+
+.levelDots i[data-on='true'] {
+  background: var(--mw-gold);
+  box-shadow: none;
+}
+
+.upgrade p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mw-ink-2);
+}
+
+.muted {
+  color: var(--mw-muted) !important;
+}
+
+.upgradeFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.upgradeFoot small {
+  font-size: 11.5px;
+  color: var(--mw-muted);
+}
+
+/* 여권 스탬프 */
+.stamps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+  justify-items: center;
+}
+
+.stamp,
+.stampEarned {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 56px;
+  border-radius: 50%;
+  font-size: 20px;
+  transition: transform 0.2s;
+}
+
+.stamp {
+  background: var(--mw-track);
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.stampEarned {
+  background: radial-gradient(circle at 30% 30%, #fff6cf, var(--mw-gold));
+  box-shadow: 0 6px 16px -6px var(--mw-gold), inset 0 0 0 2px #fff8;
+}
+
+.stampEarned:hover {
+  transform: rotate(-8deg) scale(1.05);
+}
+
+.caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mw-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) and (min-width: 461px) {
+  .journal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .titleRow {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress i,
+  .tile,
+  .stampEarned,
+  .btnPrimary,
+  .btnGhost {
+    transition: none;
+  }
+}

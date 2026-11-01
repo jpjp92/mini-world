@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { importLegacySave, SAVE_KEY } from '@/config/legacy';
 import { MARKUP } from '@/legacy/v23/markup';
 import { characterIdFromSrc, portraitDataUrl } from '@/world/portrait';
+import type { JournalActions } from '@/store/journal';
 import GameHeader, { type GameHeaderActions } from './GameHeader';
+import Journal from './journal/Journal';
 import '@/legacy/v23/v23.css';
 import './result-card.css';
+import './theme.css';
 
 // v23 스크립트는 window/document에 리스너를 걸고 정리 함수가 없어요.
 // 페이지당 한 번만 부팅해요 (StrictMode 이중 실행 방지).
@@ -17,11 +21,14 @@ const imageBase = process.env.NEXT_PUBLIC_CHARACTER_BASE_URL?.replace(/\/$/, '')
 export default function LegacyGame() {
   const ref = useRef<HTMLDivElement>(null);
   const [headerActions, setHeaderActions] = useState<GameHeaderActions | null>(null);
+  const [journalActions, setJournalActions] = useState<JournalActions | null>(null);
+  const [journalMount, setJournalMount] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const root = ref.current;
     if (booted || !root) return;
     booted = true;
+    setJournalMount(root.querySelector<HTMLElement>('#journalMount'));
     // 캐릭터 이미지가 없거나 못 불러오면 SVG 초상화로 바꿔요. (캔버스는 도형 캐릭터로 따로 대체돼요)
     root.addEventListener(
       'error',
@@ -43,6 +50,7 @@ export default function LegacyGame() {
         imageUrl: (id: string) => (imageBase ? `${imageBase}/${id}.webp` : `/missing/${id}.webp`),
       });
       setHeaderActions(actions);
+      setJournalActions(actions.journal);
     });
   }, []);
 
@@ -50,6 +58,7 @@ export default function LegacyGame() {
     <div className="legacy-root">
       <GameHeader actions={headerActions} />
       <div ref={ref} dangerouslySetInnerHTML={{ __html: MARKUP }} />
+      {journalMount && createPortal(<Journal actions={journalActions} />, journalMount)}
     </div>
   );
 }

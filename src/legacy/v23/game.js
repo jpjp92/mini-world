@@ -58,7 +58,6 @@ function upgradeCost(id){const level=state.levels[id];return level>=3?null:{coin
 function arcadeRecordKey(id,level,champ){return `${id}:${level}:${champ?'champ':'normal'}`;}
 function cleanArcadeRecords(raw){const out={};if(!raw||typeof raw!=='object')return out;for(const [key,r]of Object.entries(raw)){if(!/^(soccer|racket|racing|space|cycling|baseball|freekick|archery|ski|figure|taekwondo):[123]:(normal|champ)$/.test(key)||!r||typeof r!=='object')continue;out[key]={};for(const field of ['best','plays','wins','maxCombo','lastScore'])out[key][field]=Math.max(0,Math.floor(Number(r[field])||0));}return out;}
 function modeBest(id,level,champ){return state.arcadeRecords?.[arcadeRecordKey(id,level,champ)]?.best||0;}
-function renderUpgradeCards(box){if(!setSideHtml(box,'<p class="hint">업그레이드하면 새로운 스킬과 기믹이 열려요. 일반·챔피언 기록은 레벨별로 따로 저장해요.</p>'+activeGameEntries().map(([id,g])=>{const level=state.levels[id],cost=upgradeCost(id),best=modeBest(id,level,false);return `<article class="upgrade-card"><div class="upgrade-heading"><span>${g.icon}</span><div><b>${g.name}</b><small>Lv.${level} · ${tierNames[level-1]}</small></div><span class="tier-badge">${level}/3</span></div><p>${tierFeatures[id][level-1].join(' · ')}</p><p class="station-look-summary">외형 · ${stationLooks[id][level-1]}</p><div class="upgrade-footer"><small>${cost?`다음 단계 ${cost.coins} 🍌 + ${cost.trophies} 🏆`:`일반 ${best}${scoreUnit(id)} · 챔피언 ${modeBest(id,level,true)}${scoreUnit(id)}`}</small><button class="pill-btn" data-upgrade-preview="${id}">${cost?'업그레이드 미리보기':'기록·단계 보기'}</button></div></article>`;}).join('')))return;box.querySelectorAll('[data-upgrade-preview]').forEach(b=>b.onclick=()=>openUpgrade(b.dataset.upgradePreview));}
 function openUpgrade(id,previewLevel=null){
   const g=games[id],level=state.levels[id],cost=upgradeCost(id),affordable=cost&&state.coins>=cost.coins&&state.trophies>=cost.trophies;
   showModal(`${g.icon} ${g.name} · 스테이션 업그레이드`,`
@@ -1433,13 +1432,8 @@ function renderHud(){
   $('rosterCountLabel').innerHTML=`나의 캐릭터${unlockedRoster().length>1?' · '+unlockedRoster().length+'명':''} &nbsp; ▾`;
   const w=currentWeather();
   $('weatherText').textContent=`${w.name} · ${w.desc}`;
-  $('discoveryCount').textContent=`발견한 장소 ${state.discovered.length} / ${regions.length}`;
   $('islandName').textContent=islands[state.island].name;
-  $('stampCount').textContent=`${state.stamps.length} / ${Object.keys(games).length}`;
-  $('stamps').innerHTML=Object.entries(games).map(([id,g])=>`<div class="stamp ${state.stamps.includes(id)?'earned':''}" title="${g.name}${state.stamps.includes(id)?' 클리어':' 미완료'}">${g.icon}</div>`).join('');
-  $('stampCaption').textContent=`바나나 ${plazaProgress().count}/4 · 코브 ${coveStampCount()}/4 · 스노우 ${islandGameIds('snow').filter(id=>state.stamps.includes(id)).length}/3`;
-  $('plazaOverviewBtn').textContent=state.island==='banana'?'🏆 광장 수첩 · 트로피와 기록':`🏆 ${islands[state.island].name} · 기록 수첩`;
-  renderMission();
+  renderSidebar();
 }
 const missions=[
   {title:'섬의 작은 선물 찾기',desc:'반짝이는 바나나·조개·별, 또는 나무에서 자원 3개를 모아보세요.',type:'any_harvest',target:3,reward:'보상 🍌 30',coins:30},
@@ -1461,52 +1455,34 @@ function checkMissions(){
   }
   if(advanced)dirty();
 }
-function renderMission(){
-  const m=missions[state.tutorial];
-  if(!m){
-    $('missionStep').textContent='GRAND EXPLORER';
-    $('missionTitle').textContent=state.stamps.length===Object.keys(games).length?'세 섬의 그랜드 챔피언!':'세 섬의 열한 스탬프 수집';
-    $('missionDesc').textContent='⛴ 챔피언 코브의 양궁과 스노우 피크의 스키·피겨·태권도에 도전해 보세요.';
-    $('missionBar').style.width=`${state.stamps.length/Object.keys(games).length*100}%`;
-    $('missionProgress').textContent=`챔피언 스탬프 ${state.stamps.length} / ${Object.keys(games).length} · 세 섬의 스포츠 도전`;
-    $('missionReward').textContent='전체 기록 달성 도전';
-    return;
-  }
+function missionView(){
+  const m=missions[state.tutorial],total=Object.keys(games).length;
+  if(!m)return {step:'GRAND EXPLORER',title:state.stamps.length===total?'세 섬의 그랜드 챔피언!':'세 섬의 열한 스탬프 수집',desc:'⛴ 챔피언 코브의 양궁과 스노우 피크의 스키·피겨·태권도에 도전해 보세요.',percent:state.stamps.length/total*100,progress:`챔피언 스탬프 ${state.stamps.length} / ${total} · 세 섬의 스포츠 도전`,reward:'전체 기록 달성 도전'};
   const n=Math.min(m.target,state.history[m.type]||0);
-  $('missionStep').textContent=`0${state.tutorial+1} / 0${missions.length}`;
-  $('missionTitle').textContent=m.title;
-  $('missionDesc').textContent=m.desc;
-  $('missionBar').style.width=`${n/m.target*100}%`;
-  $('missionProgress').textContent=`진행 ${n} / ${m.target}`;
-  $('missionReward').textContent=m.reward;
+  return {step:`0${state.tutorial+1} / 0${missions.length}`,title:m.title,desc:m.desc,percent:n/m.target*100,progress:`진행 ${n} / ${m.target}`,reward:m.reward};
 }
 function questStatus(n){
   const last=state.questClaims[n.id]||{at:0,base:0};
   return {progress:Math.max(0,(state.history[n.questType]||0)-(Number(last.base)||0)),wait:Math.max(0,Math.ceil(((Number(last.at)||0)+60000-Date.now())/1000))};
 }
-function setSideHtml(box,html){
-  if(box._html===html)return false;
-  const f=document.activeElement,attr=f&&box.contains(f)?['data-npc','data-decor','data-upgrade-preview'].find(a=>f.hasAttribute(a)):null,key=attr?`[${attr}="${f.getAttribute(attr)}"]`:f&&box.contains(f)&&f.id?'#'+f.id:null;
-  box.innerHTML=html;box._html=html;box._stable=null;if(key)box.querySelector(key)?.focus({preventScroll:true});return true;
+function journalView(){
+  const total=Object.keys(games).length;
+  return {
+    discovery:`발견한 장소 ${state.discovered.length} / ${regions.length}`,
+    mission:missionView(),
+    tab:runtime.tab,
+    quests:activeNpcs().map(n=>{const q=questStatus(n);return {id:n.id,name:n.name,img:n.img,questTitle:n.questTitle,progress:Math.min(q.progress,n.questTarget),target:n.questTarget,rewardCoins:45,rewardCP:questRewardCP(),wait:q.wait,claimable:q.progress>=n.questTarget&&!q.wait};}),
+    decor:{items:catalog.map(c=>({id:c.id,icon:c.icon,name:c.name,cost:c.cost,appeal:c.appeal,actionDesc:c.actionDesc,active:runtime.decor===c.id})),removing:Boolean(runtime.removeDecor)},
+    upgrades:activeGameEntries().map(([id,g])=>{const level=state.levels[id];return {id,icon:g.icon,name:g.name,level,tierName:tierNames[level-1],features:tierFeatures[id][level-1],look:stationLooks[id][level-1],cost:upgradeCost(id),bestNormal:`${modeBest(id,level,false)}${scoreUnit(id)}`,bestChamp:`${modeBest(id,level,true)}${scoreUnit(id)}`};}),
+    passport:{count:state.stamps.length,total,stamps:Object.entries(games).map(([id,g])=>({id,icon:g.icon,name:g.name,earned:state.stamps.includes(id)})),caption:`바나나 ${plazaProgress().count}/4 · 코브 ${coveStampCount()}/4 · 스노우 ${islandGameIds('snow').filter(id=>state.stamps.includes(id)).length}/3`,overviewLabel:state.island==='banana'?'🏆 광장 수첩 · 트로피와 기록':`🏆 ${islands[state.island].name} · 기록 수첩`},
+  };
 }
+let lastJournalJson='';
 function renderSidebar(){
-  const box=$('sidePanel');
-  if(runtime.tab==='quests'){
-    const featured=activeNpcs();
-    const html=featured.map(n=>{
-      const q=questStatus(n);
-      return `<div class="quest-row"><img class="portrait" src="${n.img}" alt="${n.name}"><div class="quest-info"><b>${n.name}</b><small>${n.questTitle}<br>${q.wait?`<span data-quest-wait="${n.id}">${q.wait}</span>초 후 새 심부름`:`${Math.min(q.progress,n.questTarget)} / ${n.questTarget} · 보상 45🍌 +${questRewardCP()}⚡`}</small></div><button class="pill-btn" data-npc="${n.id}">${q.progress>=n.questTarget&&!q.wait?'보상 받기':'찾아가기'}</button></div>`;
-    }).join('');const stable=html.replace(/(data-quest-wait="[^"]+">)\d+/g,'$1');
-    for(const el of box.querySelectorAll('[data-quest-wait]')){const t=String(questStatus(roster.find(n=>n.id===el.dataset.questWait)).wait);if(el.textContent!==t)el.textContent=t;}
-    if(box._stable===stable)return;box._html=null;setSideHtml(box,html);box._stable=stable;
-    box.querySelectorAll('[data-npc]').forEach(b=>b.onclick=()=>{const n=roster.find(n=>n.id===b.dataset.npc),q=questStatus(n);if(q.progress>=n.questTarget&&!q.wait)claimQuest(n);else locateNpc(n);});
-  }else if(runtime.tab==='decor'){
-    if(!setSideHtml(box,'<p class="hint">빈 곳을 누르면 배치, 놓인 가구를 누르면 회수해요. 배치된 가구 앞에서 <b>E / Space</b>를 누르면 특별 상호작용 보너스를 받아요!</p><div class="store-grid">'+catalog.map(c=>`<button class="store-item ${runtime.decor===c.id?'active':''}" data-decor="${c.id}"><span>${c.icon}</span><b>${c.name}</b><small>${c.cost} 🍌 · 매력 +${c.appeal}<br>${c.actionDesc}</small></button>`).join('')+'</div><button class="soft-btn wide" id="removeFurniture" style="margin-top:10px">가구 회수 모드</button>'))return;
-    box.querySelectorAll('[data-decor]').forEach(b=>b.onclick=()=>setDecor(b.dataset.decor));
-    $('removeFurniture').onclick=()=>setDecor('remove');
-  }else{renderUpgradeCards(box);}
+  const view=journalView(),json=JSON.stringify(view);
+  if(json===lastJournalJson)return;lastJournalJson=json;gameStore.getState().setJournal(view);
 }
-function setTab(tab){runtime.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));renderSidebar();}
+function setTab(tab){runtime.tab=tab;renderSidebar();}
 function claimQuest(n){
   const q=questStatus(n);
   if(q.wait)return toast(`${q.wait}초 뒤 다시 부탁할게요.`);
@@ -1745,7 +1721,7 @@ let view={w:1000,h:650,dpr:1};const images={};for(const n of roster){const img=n
 function rr(c,x,y,w,h,r,fill,stroke){c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=1.5;c.stroke();}}
 function ellipse(c,x,y,rx,ry,fill){c.fillStyle=fill;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();}
 function line(c,points,color,width){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();}
-function text(c,str,x,y,size=14,color='#36533a',align='center',weight=600){c.font=`${weight} ${size}px "World Sans","World Sans","Apple SD Gothic Neo","Malgun Gothic",system-ui,"World Emoji",sans-serif`;c.textAlign=align;c.textBaseline='middle';c.fillStyle=color;c.fillText(str,x,y);}
+function text(c,str,x,y,size=14,color='#36533a',align='center',weight=600){c.font=`${weight} ${size}px "Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",system-ui,"World Emoji",sans-serif`;c.textAlign=align;c.textBaseline='middle';c.fillStyle=color;c.fillText(str,x,y);}
 function seed(i){const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function drawFlower(c,x,y,color='#f7e4b9',s=1){for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ellipse(c,x+Math.cos(a)*4*s,y+Math.sin(a)*4*s,3*s,3*s,color);}ellipse(c,x,y,2*s,2*s,'#d9ad53');}
 function drawTree(c,t,now){
@@ -2530,12 +2506,11 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();runtime.hover=screenToWorld(e.clientX-r.left,e.clientY-r.top);});
 canvas.addEventListener('pointerleave',()=>runtime.hover=null);
 $('modalClose').onclick=closeModal;$('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal();});
-$('plazaOverviewBtn').onclick=()=>state.island==='banana'?openPlaza():islandPassport(state.island);
 $('characterBtn').onclick=characterModal;$('travelBtn').onclick=travelModal;
 $('weatherBtn').onclick=cycleWeather;$('ferryBtn').onclick=openFerry;
 $('decorateBtn').onclick=()=>{if(runtime.decor||runtime.removeDecor)endDecor();else{setTab('decor');setDecor('flower');}};
 $('zoomOut').onclick=()=>{state.zoom=clamp(state.zoom-.1,.7,1.4);save();};$('zoomIn').onclick=()=>{state.zoom=clamp(state.zoom+.1,.7,1.4);save();};
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
 let lastFrame=performance.now(),lastPositionSave=0,lastSidebar=0;
 function frame(now){
   const real=Math.min(.2,Math.max(0,(now-lastFrame)/1000)),steps=Math.max(1,Math.ceil(real/(1/30))),dt=real/steps;lastFrame=now;runtime.now=now/1000;
@@ -2554,7 +2529,15 @@ if(loadWarning)toast(loadWarning,true);
 else setTimeout(()=>toast(!hadSave?'🌿 미니 월드 v23에 오신 걸 환영해요! 가구 체험과 구장 도전을 즐겨보세요!':'🌿 다시 만났네요! 새로운 섬 모험을 이어서 시작해요.'),700);
 requestAnimationFrame(frame);
 
+const journalActions={
+  setTab,
+  questAction(id){const n=roster.find(n=>n.id===id);if(!n)return;const q=questStatus(n);if(q.progress>=n.questTarget&&!q.wait)claimQuest(n);else locateNpc(n);},
+  selectDecor(id){setDecor(id);renderSidebar();},
+  openUpgrade(id){openUpgrade(id);},
+  openOverview(){state.island==='banana'?openPlaza():islandPassport(state.island);},
+};
 return {
+  journal:journalActions,
   toggleSound(){state.sound=!state.sound;dirty();sound('talk');},
   openHelp:help,
   openSettings:settings,
