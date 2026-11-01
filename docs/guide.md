@@ -23,7 +23,7 @@ pnpm dev                     # http://localhost:3000
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | 라우트 타입 생성 + `tsc --noEmit` |
 | `pnpm test` | Vitest 단위 테스트 (`tests/unit`) |
-| `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행). `pnpm dev` 실행 중이면 빌드가 멈출 수 있어요 → dev를 끄거나 `pnpm build && pnpm start -p 3100`을 먼저 띄우고 실행 |
+| `pnpm test:e2e` | Playwright E2E (`tests/e2e`, 빌드 후 3100 포트로 실행). `pnpm dev` 실행 중이면 빌드가 멈출 수 있어요 → dev를 끄거나 `pnpm build && pnpm start -p 3100`을 먼저 띄우고 실행. 3100에 예전 서버가 남아 있으면 화면이 안 떠요(`ss -ltnp \| grep 3100`으로 확인 후 종료) |
 | `pnpm test:legacy` | v23 원본 기준 테스트 (로컬 전용, `ref/2d_v23.html` 필요) |
 | `python3 scripts/extract_v23.py .` | v23 원본 → `src/legacy/v23/` 다시 생성 (로컬 전용) |
 | `pnpm add <pkg>` / `pnpm add -D <pkg>` | 패키지 추가 |
@@ -40,7 +40,7 @@ mini-world/
     engine/       # rAF 루프, 입력, 그리기 헬퍼. React·Next 의존 금지
     world/        # 월드 요소 (캐릭터, 이후 섬·NPC·장식)
     games/        # (Phase 2) 종목 모듈 11개
-    store/        # (Phase 1) Zustand, 저장/마이그레이션
+    store/        # gameStore(Zustand), saveData(기본값·검사·직렬화, 저장 v4)
     config/       # roster, world 등 밸런스·데이터 상수
   tests/unit/  tests/e2e/
   docs/           # 기획(plan_날짜), 작업 일지(log_날짜), 이 가이드
@@ -51,6 +51,8 @@ mini-world/
 - 기능을 하나씩 `src/engine`, `src/world`, `src/games`, `src/store`로 떼어내고, 레거시 쪽 코드는 지워요. 레거시 파일이 비면 Phase 2 완료.
 - 저장 키: `mini-world-save`. 첫 실행 때 옛 v23 저장을 복사하고 캐릭터 id를 바꿔요 (`src/config/legacy.ts`).
 - `src/legacy/`는 ESLint 대상에서 빼요.
+- **상태 연결**: 레거시 코드는 `state` 객체를 직접 바꿔요. `gameStore`는 같은 객체를 들고 있고, `dirty()`·불러오기·새로 시작 때 `rev`를 올려요. React UI는 `rev`를 구독해 다시 그려요.
+- **저장 형식 v4**: v2/v3과 필드는 같고 버전 표시만 4예요. 불러오기 검사는 `src/store/saveData.ts`의 `sanitizeSave` 하나에서 해요.
 
 ### 설계 원칙
 - **엔진과 React 분리**: 매 프레임 루프는 React 밖에서 돌고, React는 메뉴·모달·HUD만 그려요.

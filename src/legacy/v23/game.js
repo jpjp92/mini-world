@@ -5,6 +5,8 @@
 import { GAMES, TIER_FEATURES, LEVEL_CHALLENGES, INTRO_GUIDES, STATION_LOOKS } from '@/config/games';
 import { ISLANDS, REGIONS, STATIONS, WEATHER_MODES } from '@/config/islands';
 import { DECOR_CATALOG } from '@/config/decor';
+import { gameStore } from '@/store/gameStore';
+import { ACCEPTED_VERSIONS, createDefaultState, sanitizeSave, serializeSave as serializeSaveData } from '@/store/saveData';
 
 export function bootV23(opts) {
 // 설정 데이터는 src/config 에서 가져와요. 레거시 코드가 값을 바꿔도 원본이 안 바뀌게 복사해요.
@@ -1361,52 +1363,19 @@ function drawTaekwondo(a,w,h,now){
 }
 
 
-function defaults(){
-  return {
-    version:2,coins:120,cp:30,trophies:0,char:basePlayableIds[0],
-    coveIntroduced:true,snowIntroduced:true,island:'banana',player:{x:960,y:760},
-    levels:Object.fromEntries(Object.keys(games).map(id=>[id,1])),
-    friendship:Object.fromEntries(roster.map(n=>[n.id,1])),
-    history:{banana:0,shell:0,star:0,decor:0,talk:0,any_harvest:0,played:0,passed:0,decor_use:0},
-    arcadeRecords:{},questClaims:{},quizDone:[],quizRecords:{},discovered:['plaza'],stamps:[],best:{},
-    decors:[{id:'flower',x:850,y:680},{id:'lamp',x:1080,y:830},{id:'bench',x:865,y:850},{id:'bench',x:690,y:1000,island:'cove'},{id:'hammock',x:535,y:1070,island:'cove'},{id:'bench',x:690,y:1010,island:'snow'},{id:'lamp',x:550,y:980,island:'snow'}],
-    tutorial:0,tutorialDone:false,sound:true,zoom:1,weatherIdx:0,savedAt:0
-  };
-}
-let state=defaults();let storageWorks=true,loadWarning='',hadSave=false,loadedDecorCooldowns={};
+function defaults(){return createDefaultState();}
+let state=defaults();gameStore.getState().replace(state);let storageWorks=true,loadWarning='',hadSave=false,loadedDecorCooldowns={};
 const BACKUP_KEY=SAVE_KEY+'-backup';
 const asArray=v=>Array.isArray(v)?v:[];
 function backupSave(raw){if(typeof raw!=='string'||!raw)return false;try{localStorage.setItem(BACKUP_KEY,raw);return localStorage.getItem(BACKUP_KEY)===raw;}catch(e){return false;}}
-function serializeSave(space){const now=Date.now();return JSON.stringify({...state,cooldowns:Object.fromEntries([...trees,...resources].map(n=>[n.id,n.readyAt])),decorCooldowns:Object.fromEntries(Object.entries(runtime.decorCooldowns).filter(([,v])=>v>now))},null,space);}
+function serializeSave(space){return serializeSaveData(state,Object.fromEntries([...trees,...resources].map(n=>[n.id,n.readyAt])),runtime.decorCooldowns,Date.now(),space);}
 function load(){
   try{
     loadedDecorCooldowns={};var raw;try{raw=localStorage.getItem(SAVE_KEY);}catch(e){storageWorks=false;loadWarning='이 브라우저에서는 저장이 차단되어 있어요. 설정에서 기록을 내보내 보관하세요.';return;}if(!raw)return;
-    const s=JSON.parse(raw);if(!s||typeof s!=='object'||(s.version!==2&&s.version!==3))throw Error('버전 불일치');hadSave=true;
-    const d=defaults();d.island=islands[s.island]?s.island:'banana';
-    for(const k of ['coins','cp','trophies'])if(Number.isFinite(s[k])&&s[k]>=0)d[k]=Math.floor(s[k]);
-    d.char=normalizePlayerId(s.char);d.arcadeRecords=cleanArcadeRecords(s.arcadeRecords);
-    for(const id in games){
-      d.levels[id]=clamp(Math.floor(Number(s.levels?.[id])||1),1,3);
-      if(Number.isFinite(s.best?.[id]))d.best[id]=Math.max(0,s.best[id]);
-    }
-    for(const k in d.history)d.history[k]=Math.max(0,Number(s.history?.[k])||0);
-    for(const n of roster)d.friendship[n.id]=clamp(Number(s.friendship?.[n.id])||1,1,9999);
-    d.discovered=[...new Set(['plaza',...asArray(s.discovered).filter(id=>regions.some(r=>r.id===id))])];
-    d.stamps=[...new Set(asArray(s.stamps).filter(id=>games[id]))];
-    d.quizDone=asArray(s.quizDone).filter(id=>roster.some(n=>n.id===id));
-    d.quizRecords=cleanQuizRecords(s.quizRecords,d.quizDone);
-    d.decors=Array.isArray(s.decors)?s.decors.filter(v=>v&&typeof v==='object'&&catalog.some(c=>c.id===v.id)&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&v.x>170&&v.x<W-170&&v.y>160&&v.y<H-120):d.decors;
-    d.decors=d.decors.map(v=>({...v,island:islandOf(v)}));if(!s.coveIntroduced&&!d.decors.some(v=>v.island==='cove'))d.decors.push(...defaults().decors.filter(v=>v.island==='cove'));
-    if(!s.snowIntroduced&&!d.decors.some(v=>v.island==='snow'))d.decors.push(...defaults().decors.filter(v=>v.island==='snow'));
-    d.questClaims={};if(s.questClaims&&typeof s.questClaims==='object')for(const n of roster){const q=s.questClaims[n.id];if(q&&typeof q==='object')d.questClaims[n.id]={at:Math.max(0,Number(q.at)||0),base:Math.max(0,Number(q.base)||0)};}
-    if(s.decorCooldowns&&typeof s.decorCooldowns==='object')for(const [k,v]of Object.entries(s.decorCooldowns))if(Number(v)>Date.now())loadedDecorCooldowns[k]=Math.min(Date.now()+20000,Number(v));
-    d.tutorial=clamp(Number(s.tutorial)||0,0,5);
-    d.tutorialDone=Boolean(s.tutorialDone);
-    d.sound=s.sound!==false;
-    d.zoom=clamp(Number(s.zoom)||1,.7,1.4);
-    d.weatherIdx=clamp(Number(s.weatherIdx)||0,0,weatherModes.length-1);
-    if(Number.isFinite(s.player?.x)&&Number.isFinite(s.player?.y))d.player={x:clamp(s.player.x,180,W-180),y:clamp(s.player.y,180,H-140)};
-    state=d;
+    const loaded=sanitizeSave(JSON.parse(raw),{normalizeChar:normalizePlayerId,cleanQuizRecords});hadSave=true;
+    loadedDecorCooldowns=loaded.decorCooldowns;
+    state=loaded.state;gameStore.getState().replace(state);
+    const s={cooldowns:loaded.cooldowns};
     for(const t of trees)t.readyAt=Math.min(Date.now()+30000,Number(s.cooldowns?.[t.id])||0);
     for(const r of resources)r.readyAt=Math.min(Date.now()+45000,Number(s.cooldowns?.[r.id])||0);
   }catch(e){hadSave=false;loadedDecorCooldowns={};loadWarning=backupSave(raw)?'이전 저장을 읽지 못해 백업해 두었어요. 설정에서 백업을 내보낼 수 있어요.':'이전 저장을 읽지 못했어요. 새 모험으로 시작합니다.';}
@@ -1428,11 +1397,11 @@ function save(){
   try{
     state.savedAt=Date.now();
     localStorage.setItem(SAVE_KEY,serializeSave());
-    storageWorks=true;$('saveStatus').textContent='✓ 자동 저장됨';
-  }catch(e){storageWorks=false;$('saveStatus').textContent='저장 불가 · 설정에서 내보내기';}
+    storageWorks=true;gameStore.getState().setSaveStatus('saved');$('saveStatus').textContent='✓ 자동 저장됨';
+  }catch(e){storageWorks=false;gameStore.getState().setSaveStatus('blocked');$('saveStatus').textContent='저장 불가 · 설정에서 내보내기';}
   return storageWorks;
 }
-function dirty(){clearTimeout(runtime.saveTimer);runtime.saveTimer=setTimeout(save,400);renderHud();renderSidebar();}
+function dirty(){gameStore.getState().touch();clearTimeout(runtime.saveTimer);runtime.saveTimer=setTimeout(save,400);renderHud();renderSidebar();}
 function toast(message,bad=false,options={}){
   const key=options.key||message.replace(/\d+(?:\.\d+)?초/g,'#초');
   const kind=options.kind||(bad?'warning':/완료|완성|새로운 장소 발견|새 트로피|동료 합류/.test(message)?'milestone':'info');
@@ -2494,14 +2463,14 @@ function settings(){
     try{
       if(file.size>1024*1024)throw Error('파일이 너무 커요.');
       const s=JSON.parse(await file.text());
-      if((s.version!==2&&s.version!==3)||!s.history||!s.levels||!Array.isArray(s.decors)||!Array.isArray(s.discovered))throw Error('미니 월드 저장 파일이 아니에요.');
+      if(!ACCEPTED_VERSIONS.includes(s.version)||!s.history||!s.levels||!Array.isArray(s.decors)||!Array.isArray(s.discovered))throw Error('미니 월드 저장 파일이 아니에요.');
       clearTimeout(runtime.saveTimer);localStorage.setItem(SAVE_KEY,JSON.stringify(s));load();if(!hadSave)throw Error('기록 내용을 읽지 못했어요.');runtime.decorCooldowns=loadedDecorCooldowns;save();location.reload();
     }catch(err){$('settingsMessage').textContent='가져오지 못했어요. '+err.message;}
   };
   let confirmed=false;
   $('resetSave').onclick=()=>{
     if(!confirmed){confirmed=true;$('resetSave').textContent='정말 새로 시작하기';$('settingsMessage').textContent='현재 기록을 덮어씁니다. 보관하려면 먼저 내보내기를 눌러주세요.';return;}
-    state=defaults();runtime.stationReveal=null;runtime.decorCooldowns={};buildGround();trees.forEach(t=>t.readyAt=0);resources.forEach(r=>r.readyAt=0);runtime.camera={...state.player};clearInput();endDecor();save();closeModal();renderHud();renderSidebar();toast('새로운 모험이 시작됐어요!');
+    state=defaults();gameStore.getState().replace(state);runtime.stationReveal=null;runtime.decorCooldowns={};buildGround();trees.forEach(t=>t.readyAt=0);resources.forEach(r=>r.readyAt=0);runtime.camera={...state.player};clearInput();endDecor();save();closeModal();renderHud();renderSidebar();toast('새로운 모험이 시작됐어요!');
   };
 }
 function focusTrap(e,container){

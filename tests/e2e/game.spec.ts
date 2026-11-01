@@ -17,8 +17,8 @@ test.describe('게임 (v23 레거시 모듈)', () => {
     await page.keyboard.up('ArrowRight');
     expect((await world.screenshot()).equals(before)).toBe(false);
 
-    const keys = await page.evaluate(() => Object.keys(localStorage));
-    expect(keys).toContain('mini-world-save');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mini-world-save') ?? '{}'));
+    expect(saved.version).toBe(4);
     expect(errors).toEqual([]);
   });
 
@@ -47,6 +47,7 @@ test.describe('게임 (v23 레거시 모듈)', () => {
 });
 
 test('캐릭터 이미지가 없으면 SVG 초상화로 대체해요', async ({ page }) => {
+  await page.route(/\.webp(\?.*)?$/, (route) => route.abort());
   await page.goto('/');
   await expect(page.locator('#playerName')).toHaveText('아띠');
   const portrait = page.locator('#playerPortrait');
@@ -55,4 +56,23 @@ test('캐릭터 이미지가 없으면 SVG 초상화로 대체해요', async ({ 
     [...document.querySelectorAll<HTMLImageElement>('.legacy-root img')].filter((i) => i.complete && i.naturalWidth === 0).length,
   );
   expect(broken).toBe(0);
+});
+
+test('저장 → 다시 접속하면 같은 상태로 이어져요', async ({ page, context }) => {
+  await page.goto('/');
+  await expect(page.locator('#coins')).toHaveText('120');
+  await page.waitForFunction(() => localStorage.getItem('mini-world-save') !== null);
+  const raw = JSON.parse((await page.evaluate(() => localStorage.getItem('mini-world-save')))!);
+  await page.close();
+
+  // 게임은 페이지를 떠날 때도 저장하므로, 다음 접속 직전에 저장을 바꿔 넣어요
+  raw.coins = 4321;
+  raw.stamps = ['soccer'];
+  await context.addInitScript((data) => localStorage.setItem('mini-world-save', data), JSON.stringify(raw));
+  const next = await context.newPage();
+  await next.goto('/');
+  await expect(next.locator('#coins')).toHaveText('4,321');
+  const saved = await next.evaluate(() => JSON.parse(localStorage.getItem('mini-world-save')!));
+  expect(saved.stamps).toEqual(['soccer']);
+  expect(saved.version).toBe(4);
 });
