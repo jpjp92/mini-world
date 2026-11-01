@@ -1,67 +1,107 @@
-# 미니 월드
+# mini-world
 
-세 개의 섬을 돌아다니며 열한 가지 스포츠 미니게임에 도전하는 2D 웹 게임이에요.
+2D 캔버스 기반 스포츠 미니게임 월드. 섬 3개, 종목 11개, 캐릭터 12명.
+단일 HTML(v23, ~1MB)로 작성된 게임을 Next.js 앱으로 이전하는 프로젝트입니다.
 
-- **바나나 아일랜드**: 축구, 테니스, 바나나 런, 스타라이트 점프
-- **챔피언 코브**: 사이클, 야구, 프리킥, 양궁
-- **스노우 피크**: 스키, 피겨, 태권도
+## Stack
 
-섬에서 바나나·조개·별을 채집해 코인과 챌린지 포인트를 모으고, 구장에 도전해 레벨과 챔피언 트로피를 얻어요. 장식으로 섬을 꾸미고, 주민 심부름과 퀴즈도 즐길 수 있어요.
+| 영역 | 사용 |
+|------|------|
+| Framework | Next.js 16 (App Router), React 19, TypeScript 5 |
+| Rendering | Canvas 2D, `requestAnimationFrame` 루프 (React 렌더 사이클 밖) |
+| State | Zustand (vanilla store) |
+| Backend | Supabase (Postgres + RLS, Auth, Storage) |
+| Test | Vitest (unit), Playwright (e2e) |
+| Tooling | pnpm, ESLint, Vercel |
 
-> 단일 HTML 파일(v23)로 만든 게임을 Next.js 앱으로 옮기는 중이에요. 지금은 v23 코드를 레거시 모듈로 그대로 실행하면서 기능을 하나씩 분리하고 있어요.
+## Architecture
 
-## 기술 스택
-
-- Next.js 16 (App Router) · React 19 · TypeScript
-- Canvas 2D (게임 루프는 React 밖에서 실행)
-- Zustand (게임 상태)
-- Supabase (닉네임 로그인, 클라우드 저장, 리더보드 예정)
-- Vitest · Playwright
-- pnpm · Vercel
-
-## 시작하기
-
-```bash
-pnpm install
-cp .env.example .env.local   # 값 채우기
-pnpm dev                     # http://localhost:3000
+```
+React UI ──subscribe(rev)──▶ gameStore (Zustand) ◀──touch/replace── legacy game (v23)
+                                   │                                      │
+                              saveData                              Canvas 2D loop
+                     (default · sanitize · serialize)            (world + arcade)
+                                   │
+                              localStorage  ──(Phase 3)──▶  Supabase mini_world.saves
 ```
 
-| 명령 | 설명 |
-|------|------|
-| `pnpm dev` | 개발 서버 |
-| `pnpm build` / `pnpm start` | 프로덕션 빌드 / 실행 |
-| `pnpm lint` / `pnpm typecheck` | 린트 / 타입 검사 |
-| `pnpm test` | 단위 테스트 |
-| `pnpm test:e2e` | E2E 테스트 (처음 한 번 `pnpm exec playwright install chromium`) |
+- **Strangler 방식 이전**: v23 스크립트를 `src/legacy/v23/`에서 그대로 실행하고, 기능 단위로 `config` → `store` → `ui` → `games`로 분리합니다.
+- **엔진/React 분리**: 프레임 루프는 React 밖에서 돌고, React는 HUD·모달·사이드바만 렌더합니다. `src/engine`, `src/games`는 Next.js에 의존하지 않습니다.
+- **상태 2계층**: 저장 대상(`state`: 코인·레벨·기록)은 store, 비저장 대상(`runtime`: 입력·카메라·진행 중 판)은 엔진 내부.
+- **저장 포맷 v4**: v2/v3 필드 호환. 로드 시 `sanitizeSave`에서 범위·타입을 정리하고, 구버전 저장 키와 캐릭터 id를 자동 마이그레이션합니다.
 
-환경 변수는 [.env.example](.env.example)을 참고하세요. 캐릭터 이미지 주소를 비워두면 도형 캐릭터로 그려져요.
-
-## 구조
+## Project Structure
 
 ```
 src/
-  app/          # 페이지 (/ 게임, /lab 새 엔진 실험)
-  legacy/v23/   # v23 게임 코드 (분리 진행 중)
-  config/       # 종목·섬·캐릭터 데이터
-  store/        # 게임 상태 스토어, 저장 데이터 검사·직렬화
-  engine/       # 게임 루프, 입력, 그리기
-  world/        # 캐릭터 등 월드 요소
-  ui/           # React 컴포넌트
-tests/          # unit, e2e
-docs/           # 기획, 작업 일지, 개발 가이드
+├─ app/            # 라우트: /(게임), /lab(신규 엔진 실험)
+├─ legacy/v23/     # v23 게임 스크립트·마크업·CSS (분리 진행 중)
+├─ config/         # 종목·섬·지역·스테이션·장식·캐릭터 데이터 (타입 정의 포함)
+├─ store/          # gameStore, saveData
+├─ engine/         # 루프, 입력, 그리기 헬퍼
+├─ world/          # 캐릭터 렌더링, SVG 초상화 폴백
+└─ ui/             # React 컴포넌트
+tests/
+├─ unit/           # config, saveData, 저장 마이그레이션, 금지 명칭 검사
+└─ e2e/            # 부팅·이동·저장 유지·이미지 폴백
+docs/
+├─ plans/          # plan_YYYY-MM-DD.md
+├─ logs/           # log_YYYY-MM-DD.md
+└─ guides/         # guide_YYYY-MM-DD.md
 ```
 
-## 진행 상황
+## Getting Started
 
-- [x] Phase 0: Next.js 셸, 테스트 환경
-- [ ] Phase 1: v23 이전 (레거시 모듈 실행 ✅, 설정 데이터 분리 ✅, 상태·저장 분리 ✅, UI React화)
-- [ ] Phase 2: 종목 11개 모듈 분리
-- [ ] Phase 3: 닉네임 로그인, 클라우드 저장
-- [ ] Phase 4: 기록과 주간 리더보드
+Node.js 24, pnpm 10 기준.
 
-## 문서
+```bash
+pnpm install
+cp .env.example .env.local
+pnpm dev                          # http://localhost:3000
+```
 
-- [개발 가이드](docs/guide.md): 명령어, 구조, 설계 원칙, 저장소 규칙
-- [기획](docs/plan_2026-11-01.md)
-- 작업 일지: `docs/log_YYYY-MM-DD.md`
+### Scripts
+
+| 명령 | 설명 |
+|------|------|
+| `pnpm dev` | 개발 서버 (Turbopack) |
+| `pnpm build` / `pnpm start` | 프로덕션 빌드 / 실행 |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | 라우트 타입 생성 + `tsc --noEmit` |
+| `pnpm test` | 단위 테스트 |
+| `pnpm test:e2e` | E2E 테스트 (최초 1회 `pnpm exec playwright install chromium`) |
+
+### Environment Variables
+
+| 변수 | 범위 | 용도 |
+|------|------|------|
+| `NEXT_PUBLIC_CHARACTER_BASE_URL` | public | 캐릭터 이미지 경로 (`<base>/<id>.webp`). 비우면 도형·SVG 폴백 |
+| `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public | Supabase publishable(anon) 키, RLS로 보호 |
+| `SUPABASE_SECRET_KEY` | server only | 점수 제출 API 전용 (Phase 4) |
+
+## Data (Supabase)
+
+공유 프로젝트 안의 전용 스키마 `mini_world`를 사용합니다.
+
+| 객체 | 설명 | RLS |
+|------|------|-----|
+| `profiles` | 닉네임(대소문자 무시 unique), 대표 캐릭터 | 본인 행 |
+| `saves` | 저장 JSON, 1인 1행 | 본인 행 |
+| `runs` | 판 기록, 서버(service role)만 insert | 본인 행 읽기 |
+| `leaderboard_weekly` | 주간 종목별 최고 점수 뷰 | 공개 읽기 |
+| `mini-world-characters` | 캐릭터 이미지 버킷 | 공개 읽기 |
+
+## Roadmap
+
+- [x] **Phase 0** — Next.js 셸, 테스트 환경
+- [ ] **Phase 1** — v23 이전: 레거시 모듈 실행 ✅ · config 분리 ✅ · store 분리 ✅ · UI React화
+- [ ] **Phase 2** — 종목 11개를 `GameModule` 인터페이스로 분리, 레거시 제거
+- [ ] **Phase 3** — 닉네임 로그인(익명 세션), 클라우드 저장
+- [ ] **Phase 4** — 판 기록 검증 API, 주간 리더보드
+
+## Docs
+
+- [Guide](docs/guides/guide_2026-11-01.md) — 명령어, 구조, 설계 원칙, 저장소 규칙
+- [Plan](docs/plans/plan_2026-11-01.md) — 범위, 아키텍처, 데이터 설계, 로드맵
+- [Logs](docs/logs/) — 일자별 작업 기록

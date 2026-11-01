@@ -1,4 +1,4 @@
-// v23 ROSTER에서 옮김. 실제 구단 연상 이름은 docs/plan_2026-11-01.md §9 기준으로 변경 (barca→kicko, chelsea→curvy, atletico→atti).
+// v23 ROSTER에서 옮김. 실제 구단 연상 이름은 docs/plans/plan_2026-11-01.md §9 기준으로 변경 (barca→kicko, chelsea→curvy, atletico→atti).
 // 이미지(img)는 저장소에 넣지 않고 Storage URL로 불러와요. 없으면 도형 캐릭터로 그려요.
 
 export type GameId =

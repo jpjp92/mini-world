@@ -8,7 +8,6 @@ public/characters/
 
 # Supabase 쿼리·마이그레이션 (로컬 보관)
 supabase/
-docs/supabase-review.sql
 
 # Next.js
 /node_modules

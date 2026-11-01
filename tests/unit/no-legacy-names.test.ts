@@ -1,4 +1,4 @@
-// 공개 저장소 원칙(docs/plan_2026-11-01.md §10): 원작·실제 구단 이름이 코드에 들어가지 않게 막아요.
+// 공개 저장소 원칙(docs/plans/plan_2026-11-01.md §10): 원작·실제 구단 이름이 코드에 들어가지 않게 막아요.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
